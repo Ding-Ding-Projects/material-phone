@@ -10,7 +10,8 @@ There is no privacy toggle because no tracking behavior ships. Browser site-data
 
 ## Failure modes
 
-- Corrupt local preferences fall back to compiled defaults.
+- Corrupt, unexpected, or out-of-range local preferences fall back to compiled defaults.
+- Refused storage reads, writes, and resets remain non-blocking and report the exact persistence boundary inline.
 - Clipboard refusal is reported without claiming a copy.
 - Personal-vocabulary file selection is cleared without reading or storing the file.
 - An absent release manifest leaves download disabled.
@@ -24,7 +25,7 @@ There is no privacy toggle because no tracking behavior ships. Browser site-data
 
 ## Verification
 
-Checks scan HTML for network-bearing asset references, confirm local script/style paths, pin local-storage keys, and search public prose for private terms. Deployed verification must inspect the browser network log and served response body.
+Checks scan every executable website source for network-bearing asset references, confirm local script/style paths, and pin the local-storage validation contract. A private runtime-only publication scan checks the complete changed public source against the private vocabulary without committing vocabulary values or a digest. Deployed verification must still inspect the browser network log and served response body.
 
 ## Suggested articles
 

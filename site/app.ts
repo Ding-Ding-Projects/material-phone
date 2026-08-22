@@ -4,7 +4,11 @@
   "use strict";
 
   const features = Array.isArray(window.MATERIAL_PHONE_FEATURES) ? window.MATERIAL_PHONE_FEATURES : [];
+  const buildMetadata = window.MATERIAL_PHONE_BUILD || { commit: null, generatedAt: null, docsBase: "../docs/" };
   const storageKey = "material-phone-site-preferences-v1";
+  const defaultPreferences = Object.freeze({ theme: "light", language: "en", enFunny: 5, yueFunny: 5 });
+  const allowedThemes = new Set(["light", "dark", "contrast"]);
+  const allowedLanguages = new Set(["en", "yue", "both"]);
   const pageMeta = {
     home: ["Home", "Product overview and boundaries"],
     features: ["Features", "Desktop and web coverage ledger"],
@@ -60,16 +64,54 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const safeParse = (value, fallback) => {
-    try { return JSON.parse(value) ?? fallback; } catch { return fallback; }
-  };
-  const loadPreferences = () => ({ theme: "light", language: "en", enFunny: 5, yueFunny: 5, ...safeParse(localStorage.getItem(storageKey), {}) });
+  let preferenceStatusMessage = "Local preference storage has not reported a problem.";
+  let preferenceStorageAvailable = true;
+
+  function setPreferenceStatus(message) {
+    preferenceStatusMessage = message;
+    const region = $("#preference-status");
+    if (region) region.textContent = message;
+  }
+
+  function normalizePreferences(candidate) {
+    const source = candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate : {};
+    return {
+      theme: allowedThemes.has(source.theme) ? source.theme : defaultPreferences.theme,
+      language: allowedLanguages.has(source.language) ? source.language : defaultPreferences.language,
+      enFunny: Number.isInteger(source.enFunny) && source.enFunny >= 1 && source.enFunny <= 5 ? source.enFunny : defaultPreferences.enFunny,
+      yueFunny: Number.isInteger(source.yueFunny) && source.yueFunny >= 1 && source.yueFunny <= 5 ? source.yueFunny : defaultPreferences.yueFunny
+    };
+  }
+
+  function loadPreferences() {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored === null) return { ...defaultPreferences };
+      try { return normalizePreferences(JSON.parse(stored)); }
+      catch { setPreferenceStatus("Stored preferences were invalid, so shipped defaults are active."); return { ...defaultPreferences }; }
+    } catch {
+      preferenceStorageAvailable = false;
+      setPreferenceStatus("Local preference storage is unavailable. Changes work for this page only and will not survive a reload.");
+      return { ...defaultPreferences };
+    }
+  }
   let preferences = loadPreferences();
   let settingsRegex = null;
+  const mobileNavigation = window.matchMedia("(max-width: 900px)");
 
   function savePreferences(announce = true) {
-    localStorage.setItem(storageKey, JSON.stringify(preferences));
-    if (announce) showToast(localized("saved"));
+    preferences = normalizePreferences(preferences);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(preferences));
+      preferenceStorageAvailable = true;
+      setPreferenceStatus("Preferences are stored locally in this browser.");
+      if (announce) showToast(localized("saved"));
+      return true;
+    } catch {
+      preferenceStorageAvailable = false;
+      setPreferenceStatus("Local preference storage refused the update. The visible change is temporary and will not survive a reload.");
+      return false;
+    }
   }
 
   function localized(key) {
@@ -80,6 +122,7 @@
   }
 
   function applyPreferences() {
+    preferences = normalizePreferences(preferences);
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.lang = preferences.language === "yue" ? "yue-Hant-HK" : "en";
     $("#theme-setting").value = preferences.theme;
@@ -89,6 +132,7 @@
     $("#en-funny-output").textContent = String(preferences.enFunny);
     $("#yue-funny-output").textContent = String(preferences.yueFunny);
     $("[data-copy='boundary']").textContent = localized("boundary");
+    setPreferenceStatus(preferenceStatusMessage);
   }
 
   function showToast(message) {
@@ -97,6 +141,24 @@
     toast.textContent = message;
     $("#toast-region").append(toast);
     window.setTimeout(() => toast.remove(), 4200);
+  }
+
+  function setDrawer(open, returnFocus = false) {
+    const rail = $("#rail");
+    const opener = $("#open-nav");
+    if (!mobileNavigation.matches) {
+      rail.classList.remove("open");
+      rail.removeAttribute("inert");
+      rail.setAttribute("aria-hidden", "false");
+      opener.setAttribute("aria-expanded", "false");
+      return;
+    }
+    rail.classList.toggle("open", open);
+    rail.toggleAttribute("inert", !open);
+    rail.setAttribute("aria-hidden", String(!open));
+    opener.setAttribute("aria-expanded", String(open));
+    if (open) $("#close-nav").focus();
+    else if (returnFocus) opener.focus();
   }
 
   function activatePage(page, focusTarget = true) {
@@ -113,7 +175,7 @@
     });
     $("#page-title").textContent = pageMeta[page][0];
     $("#page-subtitle").textContent = pageMeta[page][1];
-    $("#rail").classList.remove("open");
+    setDrawer(false, false);
     history.replaceState(null, "", `#${page}`);
     if (focusTarget) $("#main").focus();
   }
@@ -143,7 +205,8 @@
   }
 
   function renderDocs() {
-    $("#docs-grid").innerHTML = docs.map(([title, path, description]) => `<a class="card" href="../docs/${path}"><span class="card-icon" aria-hidden="true">§</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><span>Open Markdown article →</span></a>`).join("");
+    const docsBase = typeof buildMetadata.docsBase === "string" && /^(?:\.\.\/)?docs\/$/.test(buildMetadata.docsBase) ? buildMetadata.docsBase : "../docs/";
+    $("#docs-grid").innerHTML = docs.map(([title, path, description]) => `<a class="card" href="${docsBase}${path}"><span class="card-icon" aria-hidden="true">§</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><span>Open Markdown article →</span></a>`).join("");
   }
 
   function renderStatus() {
@@ -164,8 +227,11 @@
       ["Status Hub", "Unavailable", "This lane could not publish to the shared authenticated status surface."]
     ];
     $("#status-grid").innerHTML = cards.map(([title, value, detail]) => `<article class="card"><h2>${escapeHtml(title)}</h2><strong>${escapeHtml(value)}</strong><p>${escapeHtml(detail)}</p></article>`).join("");
-    $("#last-updated").dateTime = new Date(document.lastModified).toISOString();
-    $("#last-updated").textContent = new Date(document.lastModified).toLocaleString();
+    const commit = typeof buildMetadata.commit === "string" && /^[0-9a-f]{40}$/.test(buildMetadata.commit) ? buildMetadata.commit : null;
+    const generatedAt = typeof buildMetadata.generatedAt === "string" && !Number.isNaN(Date.parse(buildMetadata.generatedAt)) ? buildMetadata.generatedAt : null;
+    $("#status-build-evidence").textContent = commit && generatedAt
+      ? `Generated from commit ${commit.slice(0, 12)} at ${new Date(generatedAt).toLocaleString()}. Values are derived from the checked-in feature inventory.`
+      : "Build commit and generation time are unavailable in this static source preview. Values are derived from the checked-in feature inventory.";
   }
 
   function filterSettings() {
@@ -179,7 +245,7 @@
       card.hidden = !matches;
       if (matches) shown += 1;
     });
-    if (shown === 0) showToast("No settings match the current search.");
+    $("#settings-result-count").textContent = shown === 0 ? "No settings match the current search." : `${shown} setting${shown === 1 ? "" : "s"} shown.`;
   }
 
   function compileRegex() {
@@ -203,12 +269,12 @@
   function renderPalette(query = "") {
     const normalized = query.trim().toLocaleLowerCase();
     const results = paletteCommands.filter((command) => !normalized || `${command.label} ${command.description}`.toLocaleLowerCase().includes(normalized));
-    $("#palette-results").innerHTML = results.map((command) => `<button type="button" class="palette-result" role="option" data-command="${command.id}" data-type="${command.type}"><span><strong>${escapeHtml(command.label)}</strong><br><small>${escapeHtml(command.description)}</small></span><span aria-hidden="true">→</span></button>`).join("") || "<p>No commands match.</p>";
+    $("#palette-results").innerHTML = results.map((command) => `<button type="button" class="palette-result" data-command="${command.id}" data-type="${command.type}"><span><strong>${escapeHtml(command.label)}</strong><br><small>${escapeHtml(command.description)}</small></span><span aria-hidden="true">→</span></button>`).join("") || "<p>No commands match.</p>";
   }
 
   function openPalette() {
     renderPalette();
-    $("#palette").showModal();
+    if (!$("#palette").open) $("#palette").showModal();
     window.setTimeout(() => $("#palette-search").focus(), 0);
   }
 
@@ -227,7 +293,6 @@
   }
 
   $$(".tabs [role='tab']").forEach((tab, index, tabs) => {
-    tab.id = `${tab.dataset.tab}-tab`;
     tab.tabIndex = tab.getAttribute("aria-selected") === "true" ? 0 : -1;
     tab.addEventListener("click", () => activatePage(tab.dataset.tab));
     tab.addEventListener("keydown", (event) => {
@@ -238,8 +303,9 @@
     });
   });
   $$('[data-go]').forEach((button) => button.addEventListener("click", () => activatePage(button.dataset.go)));
-  $("#open-nav").addEventListener("click", () => $("#rail").classList.add("open"));
-  $("#close-nav").addEventListener("click", () => $("#rail").classList.remove("open"));
+  $("#open-nav").addEventListener("click", () => setDrawer(true));
+  $("#close-nav").addEventListener("click", () => setDrawer(false, true));
+  mobileNavigation.addEventListener?.("change", () => setDrawer(false, false));
   ["feature-search", "surface-filter", "status-filter"].forEach((id) => document.getElementById(id).addEventListener("input", renderFeatureInventory));
   $("#theme-setting").addEventListener("change", (event) => { preferences.theme = event.target.value; applyPreferences(); savePreferences(); });
   $("#language-setting").addEventListener("change", (event) => { preferences.language = event.target.value; applyPreferences(); savePreferences(); });
@@ -277,8 +343,15 @@
   });
   $("#reset-settings").addEventListener("click", () => {
     if (!window.confirm("Reset this site's locally stored theme, language, and funny-level preferences?")) return;
-    localStorage.removeItem(storageKey);
-    preferences = loadPreferences();
+    try {
+      localStorage.removeItem(storageKey);
+      preferenceStorageAvailable = true;
+      setPreferenceStatus("Site preferences were reset to shipped defaults.");
+    } catch {
+      preferenceStorageAvailable = false;
+      setPreferenceStatus("Local preference storage refused the reset. Shipped defaults are active for this page only.");
+    }
+    preferences = { ...defaultPreferences };
     settingsRegex = null;
     applyPreferences();
     showToast(localized("reset"));
@@ -291,12 +364,14 @@
   });
   document.addEventListener("keydown", (event) => {
     if (event.ctrlKey && event.shiftKey && event.key.toLocaleLowerCase() === "f") { event.preventDefault(); openPalette(); }
+    if (event.key === "Escape" && mobileNavigation.matches && $("#rail").classList.contains("open")) { event.preventDefault(); setDrawer(false, true); }
   });
 
   renderFeatureInventory();
   renderDocs();
   renderStatus();
   applyPreferences();
+  setDrawer(false, false);
   updateRegexFeedback();
   activatePage(location.hash.slice(1) || "home", false);
 })();

@@ -11,6 +11,12 @@
 - [x] Add evidence-labelled status and download surfaces.
 - [x] Add a hand-written desktop/web feature inventory with exactly two explicit user exclusions.
 - [x] Add deterministic zero-dependency build and structural checks.
+- [x] Make generated-output freshness fail before mutation and prove stale tracked output red then green.
+- [x] Stage the website and documentation together and validate required artifact files before Pages upload.
+- [x] Pin every Pages action to a reviewed immutable commit SHA with its version tag retained in a comment.
+- [x] Complete narrow-drawer semantics, Escape handling, focus entry, and focus return.
+- [x] Validate stored preferences and report refused storage reads, writes, and resets honestly.
+- [x] Remove private vocabulary values and digests from committed public tests and source.
 - [ ] Capture the built website at phone, tablet, and desktop widths through the approved hidden interaction route.
 - [ ] Publish the website and verify served Open Graph tags and image bytes anonymously.
 
@@ -44,6 +50,7 @@
 - [ ] Upgrade `documented` entries only after working behavior and direct evidence exist.
 - [ ] Add per-contract localization, interaction proof, and real capture references.
 - [ ] Add a deliberate red-then-green negative regression for the complete inventory.
+- [ ] Upgrade partial website contracts from `documented` only after their complete universal behavior and real interaction evidence exist.
 
 ## Explicitly outside the current scope
 

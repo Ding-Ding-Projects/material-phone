@@ -26,6 +26,20 @@ All notable changes to this project will be documented in this file.
 - Website assets and interactions are local-only, with no CDN, analytics, remote font, or runtime API request.
 - Installer action remains disabled until a verified immutable release manifest exists.
 - Personal-vocabulary file processing remains unavailable until its bounded local validator is implemented.
+- Removed literal private-vocabulary values from committed public tests and source; publication scanning now remains a private runtime operation.
+- Pinned all Pages actions to reviewed immutable commit SHAs while retaining readable version comments.
+
+### Fixed
+
+- Made generated-output freshness fail before the generator writes, with a deliberate stale-output red/green regression.
+- Staged website and documentation under one Pages artifact and added artifact-level existence and link checks.
+- Repaired deployed documentation-card paths through generated build metadata.
+- Downgraded partial web feature claims and kept Status Hub planned until complete evidence exists.
+- Completed narrow navigation-drawer semantics, Escape handling, focus entry/return, stable tab IDs, and panel labelling.
+- Replaced incomplete palette listbox roles with ordinary buttons and raised chips to 44-pixel targets.
+- Added allowlisted preference validation and honest non-blocking storage-refusal states.
+- Replaced repeated no-match notifications with one inline settings result region.
+- Replaced `document.lastModified` with optional exact build commit/time metadata and an honest unavailable fallback.
 
 Group changes to describe their impact on the project, as follows:
 

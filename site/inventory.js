@@ -1,18 +1,18 @@
-// Generated from data/feature-inventory.json by build-site.mjs. Do not edit directly.
+// Generated file. Do not edit directly.
 window.MATERIAL_PHONE_FEATURES = [
   {
     "id": "language-modes",
     "name": "English, Cantonese, and bilingual modes",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Web selector persists locally; desktop implementation requires built-artifact proof."
+    "web": "documented",
+    "evidence": "The site selector changes selected copy only; complete localization and interaction proof remain open."
   },
   {
     "id": "funny-levels",
     "name": "Independent English and Cantonese funny levels",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Two persisted web sliders default to level 5 and never alter facts."
+    "web": "documented",
+    "evidence": "Two local sliders style selected copy, but complete message-category coverage and browser proof remain open."
   },
   {
     "id": "dialog-emojis",
@@ -67,8 +67,8 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "material-design",
     "name": "Material Design 3 visual system",
     "desktop": "documented",
-    "web": "implemented",
-    "evidence": "Site uses local color roles, typography, shape, elevation, focus, and reduced-motion styling."
+    "web": "documented",
+    "evidence": "The site uses local design tokens, but complete component anatomy, motion, and built-surface audit remain open."
   },
   {
     "id": "appearance-controls",
@@ -109,8 +109,8 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "tabs",
     "name": "Browser-style tabs with dock persistence",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Site uses a responsive left-docked ARIA tablist; advanced dock switching remains planned."
+    "web": "documented",
+    "evidence": "A left-docked ARIA tablist works, but dock switching, persistence, overflow, pinning, grouping, and full searches remain open."
   },
   {
     "id": "tab-pinning",
@@ -144,8 +144,8 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "regex-builder",
     "name": "Full anchored regex builder on searches",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Settings search has a local JavaScript regex builder with flags, samples, feedback, and copy."
+    "web": "documented",
+    "evidence": "Settings has a bounded builder, but every search, menu, dropdown, and adversarial browser proof remain open."
   },
   {
     "id": "menu-search",
@@ -158,8 +158,8 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "command-palette",
     "name": "Ctrl+Shift+F command palette and teleport",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Keyboard shortcut opens the palette and results activate exact tabs/settings with focus highlighting."
+    "web": "documented",
+    "evidence": "The shortcut and selected destinations work, but exhaustive feature, setting, appearance, and rich-control coverage remains open."
   },
   {
     "id": "guided-forms",
@@ -179,8 +179,8 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "settings-explanations",
     "name": "Settings explanations and default provenance",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Every current site setting includes behavior and truthful default provenance."
+    "web": "documented",
+    "evidence": "Current site settings explain behavior and defaults; a complete hand-written settings-element coverage proof remains open."
   },
   {
     "id": "adhd-modes",
@@ -333,22 +333,22 @@ window.MATERIAL_PHONE_FEATURES = [
     "id": "responsive-sizing",
     "name": "Responsive layout, scaling, and clipping protection",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Site supports 320px layouts, internal table scrolling, large targets, and reduced motion."
+    "web": "documented",
+    "evidence": "Responsive CSS and internal scrolling exist, but real phone, tablet, zoom, touch, and capture proof remain open."
   },
   {
     "id": "accessibility",
     "name": "Keyboard, focus, semantics, contrast, and reduced motion",
     "desktop": "documented",
-    "web": "implemented",
-    "evidence": "Skip link, ARIA tabs, dialogs, live regions, focus indicators, contrast theme, and reduced motion ship."
+    "web": "documented",
+    "evidence": "Core semantic markers exist, but screen-reader, keyboard-only, zoom, touch, and real-browser proof remain open."
   },
   {
     "id": "status-hub",
     "name": "Status Hub surface and evidence cards",
     "desktop": "planned",
-    "web": "implemented",
-    "evidence": "Local site dashboard is implemented; shared authenticated hub connectivity was unavailable in this lane."
+    "web": "planned",
+    "evidence": "Local status cards are not the shared authenticated Status Hub; client wiring and delivery proof remain open."
   },
   {
     "id": "browser-download-dialogs",
@@ -372,7 +372,7 @@ window.MATERIAL_PHONE_FEATURES = [
     "evidence": "Download remains disabled until Setup.exe, RELEASES, full package, hashes, and manifest are verified."
   },
   {
-    "id": "day-teet-hui-boundary",
+    "id": "landing-documentation-boundary",
     "name": "Landing/documentation boundary",
     "desktop": "documented",
     "web": "implemented",

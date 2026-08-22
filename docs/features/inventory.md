@@ -4,12 +4,14 @@
 
 `site/data/feature-inventory.json` names every current canonical feature contract independently for desktop and web. Each surface has one of four states:
 
-- `implemented`: working local behavior exists and its evidence is named.
+- `implemented`: the complete named contract genuinely holds for that surface and its evidence is named.
 - `documented`: the contract or boundary is documented, but full behavior is not claimed.
 - `planned`: required behavior has not been implemented or proven.
 - `excluded`: the current user explicitly removed that contract from this project scope.
 
 Exactly two entries are excluded: the universal local file converter and local Ollama suite manager. No other absence is converted into an exclusion.
+
+The current website marks only its exact landing/documentation boundary as implemented. Theme and language controls, funny levels, the tab shell, regex builder, palette, settings explanations, responsive CSS, and accessibility markers are useful partial implementations, but remain `documented` until their full universal contracts and real interaction evidence exist. The shared Status Hub row is `planned`; local status cards are not a substitute for authenticated Hub wiring.
 
 ## Configuration
 
@@ -27,7 +29,7 @@ The inventory contains no private infrastructure, credentials, machine paths, or
 
 ## Verification
 
-Checks require exactly two known exclusions, allowed status values, unique IDs, required evidence, generated-file freshness, and inventory rendering. A future negative regression must deliberately remove a row and prove the completeness check turns red before restoration.
+Checks require exactly two known exclusions, allowed status values, unique IDs, required evidence, exactly one fully implemented web boundary, planned Status Hub state, generated-file freshness, and inventory rendering. The negative regression deliberately removes a row and proves the completeness check turns red before restoration.
 
 ## Suggested articles
 

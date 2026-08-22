@@ -18,26 +18,26 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="app-shell">
-    <aside class="rail" id="rail" aria-label="Documentation tabs">
+    <aside class="rail" id="rail" aria-label="Documentation tabs" aria-hidden="false">
       <div class="brand-row">
         <div class="brand-mark" aria-hidden="true">MP</div>
         <div><strong>Material Phone</strong><span>Documentation</span></div>
       </div>
       <button class="icon-button mobile-only" id="close-nav" aria-label="Close navigation">×</button>
       <nav class="tabs" role="tablist" aria-orientation="vertical">
-        <button role="tab" aria-selected="true" aria-controls="home-panel" data-tab="home">Home</button>
-        <button role="tab" aria-selected="false" aria-controls="features-panel" data-tab="features">Features</button>
-        <button role="tab" aria-selected="false" aria-controls="docs-panel" data-tab="docs">Documentation</button>
-        <button role="tab" aria-selected="false" aria-controls="download-panel" data-tab="download">Download</button>
-        <button role="tab" aria-selected="false" aria-controls="status-panel" data-tab="status">Status</button>
-        <button role="tab" aria-selected="false" aria-controls="settings-panel" data-tab="settings">Settings</button>
+        <button id="home-tab" role="tab" aria-selected="true" aria-controls="home-panel" data-tab="home">Home</button>
+        <button id="features-tab" role="tab" aria-selected="false" aria-controls="features-panel" data-tab="features">Features</button>
+        <button id="docs-tab" role="tab" aria-selected="false" aria-controls="docs-panel" data-tab="docs">Documentation</button>
+        <button id="download-tab" role="tab" aria-selected="false" aria-controls="download-panel" data-tab="download">Download</button>
+        <button id="status-tab" role="tab" aria-selected="false" aria-controls="status-panel" data-tab="status">Status</button>
+        <button id="settings-tab" role="tab" aria-selected="false" aria-controls="settings-panel" data-tab="settings">Settings</button>
       </nav>
       <button class="tonal-button palette-launch" id="palette-launch" aria-keyshortcuts="Control+Shift+F">Command palette <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></button>
     </aside>
 
     <div class="content-shell">
       <header class="top-bar">
-        <button class="icon-button mobile-only" id="open-nav" aria-label="Open navigation">☰</button>
+        <button class="icon-button mobile-only" id="open-nav" aria-label="Open navigation" aria-controls="rail" aria-expanded="false">☰</button>
         <div><strong id="page-title">Home</strong><span id="page-subtitle">Product overview and boundaries</span></div>
         <span class="status-chip" data-state="documented">Documentation preview</span>
       </header>
@@ -75,7 +75,7 @@
           </div>
         </section>
 
-        <section id="features-panel" class="tab-panel" role="tabpanel" hidden data-page="features">
+        <section id="features-panel" class="tab-panel" role="tabpanel" aria-labelledby="features-tab" hidden data-page="features">
           <div class="section-heading"><div><p class="eyebrow">Coverage ledger</p><h1>Desktop and web feature inventory</h1><p>Every contract is listed explicitly. Status describes current evidence, not intent.</p></div></div>
           <div class="filter-bar collapsible" aria-label="Feature filters">
             <label>Search features<input id="feature-search" type="search" placeholder="Name, scope, status, or evidence"></label>
@@ -86,25 +86,26 @@
           <div class="table-wrap"><table><thead><tr><th>Feature contract</th><th>Desktop</th><th>Web</th><th>Evidence / next action</th></tr></thead><tbody id="feature-table"></tbody></table></div>
         </section>
 
-        <section id="docs-panel" class="tab-panel" role="tabpanel" hidden data-page="docs">
+        <section id="docs-panel" class="tab-panel" role="tabpanel" aria-labelledby="docs-tab" hidden data-page="docs">
           <div class="section-heading"><div><p class="eyebrow">Offline-friendly guide</p><h1>Documentation library</h1><p>Each article records behavior, configuration, failure modes, security, verification, and suggested reading.</p></div></div>
           <div class="card-grid docs-grid" id="docs-grid"></div>
         </section>
 
-        <section id="download-panel" class="tab-panel" role="tabpanel" hidden data-page="download">
+        <section id="download-panel" class="tab-panel" role="tabpanel" aria-labelledby="download-tab" hidden data-page="download">
           <div class="section-heading"><div><p class="eyebrow">Evidence-gated delivery</p><h1>Download Material Phone</h1><p>The site will expose a direct installer only after the release manifest proves an immutable Windows asset URL.</p></div></div>
           <div class="notice warning" role="status"><strong>No verified installer is published from this documentation lane.</strong><span>The download action is disabled instead of linking to a candidate, upstream package, or guessed URL.</span></div>
           <article class="card download-card"><div><span class="status-chip" data-state="planned">Unavailable</span><h2>Windows installer</h2><p>Required evidence: version, target commit, unsigned Squirrel.Windows artifact set, SHA-256, release notes, and an immutable asset URL.</p></div><button class="filled-button" disabled aria-describedby="download-blocker">Download installer</button><p id="download-blocker" class="supporting-text">Disabled because no validated release manifest is present.</p></article>
         </section>
 
-        <section id="status-panel" class="tab-panel" role="tabpanel" hidden data-page="status">
-          <div class="section-heading"><div><p class="eyebrow">Current evidence</p><h1>Project status</h1><p>Last updated <time id="last-updated"></time>. Values are derived from this checked-in site inventory.</p></div></div>
+        <section id="status-panel" class="tab-panel" role="tabpanel" aria-labelledby="status-tab" hidden data-page="status">
+          <div class="section-heading"><div><p class="eyebrow">Current evidence</p><h1>Project status</h1><p id="status-build-evidence">Build commit and generation time are unavailable in this static source preview. Values are derived from the checked-in feature inventory.</p></div></div>
           <div class="status-grid" id="status-grid"></div>
           <article class="card"><h2>Verification boundary</h2><p>This static dashboard reports repository evidence only. It does not poll a release service, call runtime, CI provider, or account. External state remains explicitly unverified until a future publication flow writes a validated manifest.</p></article>
         </section>
 
-        <section id="settings-panel" class="tab-panel" role="tabpanel" hidden data-page="settings">
+        <section id="settings-panel" class="tab-panel" role="tabpanel" aria-labelledby="settings-tab" hidden data-page="settings">
           <div class="section-heading"><div><p class="eyebrow">Local visitor preferences</p><h1>Site settings</h1><p>Preferences stay in this browser. Clear site data to reset everything.</p></div></div>
+          <p id="preference-status" class="result-count" role="status" aria-live="polite">Local preference storage has not reported a problem.</p>
           <div class="search-builder-wrap">
             <label class="grow">Search settings<input id="settings-search" type="search" placeholder="Search labels, descriptions, and values" aria-controls="settings-list"></label>
             <button class="tonal-button" id="regex-toggle" aria-expanded="false" aria-controls="regex-builder">Regex builder</button>
@@ -118,6 +119,7 @@
               <div class="button-row"><button class="filled-button" id="apply-regex">Apply to settings search</button><button class="tonal-button" id="copy-regex">Copy pattern</button></div>
             </div>
           </div>
+          <p id="settings-result-count" class="result-count" role="status" aria-live="polite">6 settings shown.</p>
           <div id="settings-list" class="settings-list">
             <article class="setting-card" data-search="theme light dark appearance">
               <div><h2>Theme</h2><p>Changes the site color roles. Default provenance: compiled light theme.</p></div>
@@ -153,11 +155,12 @@
     <form method="dialog" class="palette-card">
       <div class="dialog-heading"><div><p class="eyebrow">Navigate and change</p><h1 id="palette-title">Command palette</h1></div><button class="icon-button" value="cancel" aria-label="Close command palette">×</button></div>
       <input id="palette-search" type="search" placeholder="Search destinations and settings" autocomplete="off">
-      <div id="palette-results" class="palette-results" role="listbox"></div>
+      <div id="palette-results" class="palette-results"></div>
     </form>
   </dialog>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script src="inventory.js" defer></script>
+  <script src="metadata.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

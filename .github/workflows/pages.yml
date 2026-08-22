@@ -1,9 +1,7 @@
-name: Deploy documentation site
+name: Publish Material Phone Pages
 
 on:
   push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -13,26 +11,46 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  publish:
+    runs-on: windows-2025
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
     steps:
-      - name: Check out documentation source
-        uses: actions/checkout@v4
+      - name: Check out the source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
-      - name: Upload static documentation
-        uses: actions/upload-pages-artifact@v3
+      - name: Record exact build provenance
+        shell: pwsh
+        run: |
+          $buildTime = [DateTimeOffset]::UtcNow.ToString("o")
+          "SITE_COMMIT=$env:GITHUB_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SITE_BUILD_TIME=$buildTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SITE_DOCS_BASE=docs/" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build generated website files
+        shell: pwsh
+        run: node site/build-site.mjs
+
+      - name: Stage website and documentation together
+        shell: pwsh
+        run: node site/stage-pages.mjs "$env:RUNNER_TEMP/material-phone-pages"
+
+      - name: Validate the staged Pages artifact
+        shell: pwsh
+        run: node site/check-pages-artifact.mjs "$env:RUNNER_TEMP/material-phone-pages"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
-          path: site
+          path: ${{ runner.temp }}/material-phone-pages
 
-      - name: Deploy documentation
+      - name: Deploy Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
