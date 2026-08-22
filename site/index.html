@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6750a4">
+  <meta name="description" content="Material Phone documentation, download status, feature inventory, and local site settings.">
+  <meta property="og:title" content="Material Phone documentation">
+  <meta property="og:description" content="Documentation, verified download status, feature coverage, and privacy details for Material Phone.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Material Phone documentation">
+  <meta property="og:image:alt" content="Material Phone documentation preview">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>Material Phone documentation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app-shell">
+    <aside class="rail" id="rail" aria-label="Documentation tabs">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true">MP</div>
+        <div><strong>Material Phone</strong><span>Documentation</span></div>
+      </div>
+      <button class="icon-button mobile-only" id="close-nav" aria-label="Close navigation">×</button>
+      <nav class="tabs" role="tablist" aria-orientation="vertical">
+        <button role="tab" aria-selected="true" aria-controls="home-panel" data-tab="home">Home</button>
+        <button role="tab" aria-selected="false" aria-controls="features-panel" data-tab="features">Features</button>
+        <button role="tab" aria-selected="false" aria-controls="docs-panel" data-tab="docs">Documentation</button>
+        <button role="tab" aria-selected="false" aria-controls="download-panel" data-tab="download">Download</button>
+        <button role="tab" aria-selected="false" aria-controls="status-panel" data-tab="status">Status</button>
+        <button role="tab" aria-selected="false" aria-controls="settings-panel" data-tab="settings">Settings</button>
+      </nav>
+      <button class="tonal-button palette-launch" id="palette-launch" aria-keyshortcuts="Control+Shift+F">Command palette <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></button>
+    </aside>
+
+    <div class="content-shell">
+      <header class="top-bar">
+        <button class="icon-button mobile-only" id="open-nav" aria-label="Open navigation">☰</button>
+        <div><strong id="page-title">Home</strong><span id="page-subtitle">Product overview and boundaries</span></div>
+        <span class="status-chip" data-state="documented">Documentation preview</span>
+      </header>
+
+      <main id="main" tabindex="-1">
+        <section id="home-panel" class="tab-panel active" role="tabpanel" aria-labelledby="home-tab" data-page="home">
+          <div class="hero">
+            <div>
+              <p class="eyebrow">Windows desktop calling, redesigned</p>
+              <h1>Material Phone puts the call in reach.</h1>
+              <p class="lede" data-copy="boundary">This website is a documentation, download, status, settings, and link surface. It is not the calling runtime and does not place or receive calls.</p>
+              <div class="button-row">
+                <button class="filled-button" data-go="docs">Read the documentation</button>
+                <button class="tonal-button" data-go="download">Check download status</button>
+              </div>
+            </div>
+            <div class="phone-card" aria-label="Static product capability preview">
+              <span class="preview-label">Static capability preview</span>
+              <div class="avatar" aria-hidden="true">A</div>
+              <h2>Alex Morgan</h2>
+              <p>Secure SIP contact</p>
+              <div class="call-actions" aria-hidden="true"><span>Mic</span><span>Video</span><span>End</span></div>
+              <p class="preview-note">Illustration only. Controls are intentionally non-interactive.</p>
+            </div>
+          </div>
+          <div class="metric-grid" aria-label="Documentation summary">
+            <article class="metric"><strong id="feature-count">0</strong><span>inventoried contracts</span></article>
+            <article class="metric"><strong id="implemented-count">0</strong><span>site behaviors implemented</span></article>
+            <article class="metric"><strong>0</strong><span>network requests from settings</span></article>
+          </div>
+          <div class="card-grid">
+            <article class="card"><span class="card-icon" aria-hidden="true">☎</span><h2>Calling-first structure</h2><p>Documentation for contacts, call history, conversations, meetings, settings, and the supporting desktop architecture.</p></article>
+            <article class="card"><span class="card-icon" aria-hidden="true">◈</span><h2>Material Design 3</h2><p>Color roles, type scale, shape, elevation, focus, motion, and responsive behavior are applied through local CSS tokens.</p></article>
+            <article class="card"><span class="card-icon" aria-hidden="true">⌁</span><h2>Evidence before claims</h2><p>Download and release actions stay unavailable until an immutable installer URL and matching verification record exist.</p></article>
+          </div>
+        </section>
+
+        <section id="features-panel" class="tab-panel" role="tabpanel" hidden data-page="features">
+          <div class="section-heading"><div><p class="eyebrow">Coverage ledger</p><h1>Desktop and web feature inventory</h1><p>Every contract is listed explicitly. Status describes current evidence, not intent.</p></div></div>
+          <div class="filter-bar collapsible" aria-label="Feature filters">
+            <label>Search features<input id="feature-search" type="search" placeholder="Name, scope, status, or evidence"></label>
+            <label>Surface<select id="surface-filter"><option value="all">All surfaces</option><option value="desktop">Desktop</option><option value="web">Web</option></select></label>
+            <label>Status<select id="status-filter"><option value="all">All states</option><option value="implemented">Implemented</option><option value="documented">Documented</option><option value="planned">Planned</option><option value="excluded">Excluded</option></select></label>
+          </div>
+          <p id="feature-result-count" class="result-count" aria-live="polite"></p>
+          <div class="table-wrap"><table><thead><tr><th>Feature contract</th><th>Desktop</th><th>Web</th><th>Evidence / next action</th></tr></thead><tbody id="feature-table"></tbody></table></div>
+        </section>
+
+        <section id="docs-panel" class="tab-panel" role="tabpanel" hidden data-page="docs">
+          <div class="section-heading"><div><p class="eyebrow">Offline-friendly guide</p><h1>Documentation library</h1><p>Each article records behavior, configuration, failure modes, security, verification, and suggested reading.</p></div></div>
+          <div class="card-grid docs-grid" id="docs-grid"></div>
+        </section>
+
+        <section id="download-panel" class="tab-panel" role="tabpanel" hidden data-page="download">
+          <div class="section-heading"><div><p class="eyebrow">Evidence-gated delivery</p><h1>Download Material Phone</h1><p>The site will expose a direct installer only after the release manifest proves an immutable Windows asset URL.</p></div></div>
+          <div class="notice warning" role="status"><strong>No verified installer is published from this documentation lane.</strong><span>The download action is disabled instead of linking to a candidate, upstream package, or guessed URL.</span></div>
+          <article class="card download-card"><div><span class="status-chip" data-state="planned">Unavailable</span><h2>Windows installer</h2><p>Required evidence: version, target commit, unsigned Squirrel.Windows artifact set, SHA-256, release notes, and an immutable asset URL.</p></div><button class="filled-button" disabled aria-describedby="download-blocker">Download installer</button><p id="download-blocker" class="supporting-text">Disabled because no validated release manifest is present.</p></article>
+        </section>
+
+        <section id="status-panel" class="tab-panel" role="tabpanel" hidden data-page="status">
+          <div class="section-heading"><div><p class="eyebrow">Current evidence</p><h1>Project status</h1><p>Last updated <time id="last-updated"></time>. Values are derived from this checked-in site inventory.</p></div></div>
+          <div class="status-grid" id="status-grid"></div>
+          <article class="card"><h2>Verification boundary</h2><p>This static dashboard reports repository evidence only. It does not poll a release service, call runtime, CI provider, or account. External state remains explicitly unverified until a future publication flow writes a validated manifest.</p></article>
+        </section>
+
+        <section id="settings-panel" class="tab-panel" role="tabpanel" hidden data-page="settings">
+          <div class="section-heading"><div><p class="eyebrow">Local visitor preferences</p><h1>Site settings</h1><p>Preferences stay in this browser. Clear site data to reset everything.</p></div></div>
+          <div class="search-builder-wrap">
+            <label class="grow">Search settings<input id="settings-search" type="search" placeholder="Search labels, descriptions, and values" aria-controls="settings-list"></label>
+            <button class="tonal-button" id="regex-toggle" aria-expanded="false" aria-controls="regex-builder">Regex builder</button>
+            <div class="regex-builder" id="regex-builder" hidden>
+              <h2>JavaScript regex builder</h2>
+              <label>Pattern<input id="regex-pattern" type="text" value="theme|language"></label>
+              <fieldset><legend>Flags</legend><label><input type="checkbox" id="flag-i" checked> Ignore case</label><label><input type="checkbox" id="flag-m"> Multiline</label></fieldset>
+              <div class="builder-buttons"><button class="chip-button" data-insert="^">Start anchor ^</button><button class="chip-button" data-insert="$">End anchor $</button><button class="chip-button" data-insert="( )">Group ( )</button><button class="chip-button" data-insert="|">Alternation |</button><button class="chip-button" data-insert="+">One or more +</button></div>
+              <label>Sample text<textarea id="regex-sample" rows="3">Theme\nLanguage\nFunny level</textarea></label>
+              <p id="regex-feedback" aria-live="polite"></p>
+              <div class="button-row"><button class="filled-button" id="apply-regex">Apply to settings search</button><button class="tonal-button" id="copy-regex">Copy pattern</button></div>
+            </div>
+          </div>
+          <div id="settings-list" class="settings-list">
+            <article class="setting-card" data-search="theme light dark appearance">
+              <div><h2>Theme</h2><p>Changes the site color roles. Default provenance: compiled light theme.</p></div>
+              <select id="theme-setting" aria-label="Theme"><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select>
+            </article>
+            <article class="setting-card" data-search="language english cantonese bilingual">
+              <div><h2>Language presentation</h2><p>Changes selected navigation and status copy. Default provenance: compiled English.</p></div>
+              <select id="language-setting" aria-label="Language presentation"><option value="en">English</option><option value="yue">Playful Hong Kong-style Cantonese</option><option value="both">Bilingual</option></select>
+            </article>
+            <article class="setting-card" data-search="english funny humor humour level">
+              <div><h2>English funny level</h2><p>Styles English voice from serious (1) to playful (5); facts never change. Default: 5.</p></div>
+              <output id="en-funny-output" for="en-funny">5</output><input id="en-funny" type="range" min="1" max="5" value="5" aria-label="English funny level">
+            </article>
+            <article class="setting-card" data-search="cantonese funny humor humour level">
+              <div><h2>Cantonese funny level</h2><p>Styles Cantonese voice independently from 1 to 5. Default: 5.</p></div>
+              <output id="yue-funny-output" for="yue-funny">5</output><input id="yue-funny" type="range" min="1" max="5" value="5" aria-label="Cantonese funny level">
+            </article>
+            <article class="setting-card" data-search="personal vocabulary json upload replace clear local private">
+              <div><h2>Personal vocabulary file</h2><p>Visible local-only control. No terms are built in; original wording remains until a future bounded validator is implemented.</p></div>
+              <input id="vocabulary-upload" type="file" accept="application/json,.json" aria-describedby="vocabulary-status"><p id="vocabulary-status" class="supporting-text">No file loaded. Processing is intentionally unavailable in this documentation build.</p>
+            </article>
+            <article class="setting-card" data-search="reset clear local browser preferences">
+              <div><h2>Reset site preferences</h2><p>Deletes this site's local presentation settings after confirmation.</p></div>
+              <button class="outlined-button" id="reset-settings">Reset preferences</button>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="palette" aria-labelledby="palette-title">
+    <form method="dialog" class="palette-card">
+      <div class="dialog-heading"><div><p class="eyebrow">Navigate and change</p><h1 id="palette-title">Command palette</h1></div><button class="icon-button" value="cancel" aria-label="Close command palette">×</button></div>
+      <input id="palette-search" type="search" placeholder="Search destinations and settings" autocomplete="off">
+      <div id="palette-results" class="palette-results" role="listbox"></div>
+    </form>
+  </dialog>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script src="inventory.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
