@@ -27,6 +27,9 @@
         "kind": "zip",
         "url": "https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-windows-x86_64.zip",
         "sha256": "d163cd3ab4959b0a53fa8988f2ddbd2e6c501658201e6a154386bad9dbe4f836",
+        "maxDownloadBytes": 50000000,
+        "downloadTimeoutSeconds": 1020,
+        "heartbeatSeconds": 15,
         "stripSingleDirectory": true,
         "commandRelativePath": "bin/cmake.exe"
       }

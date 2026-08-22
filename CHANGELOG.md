@@ -36,6 +36,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Calibrated the pinned 46.5 MB CMake fallback to a finite 17-minute download window with a 50 MB ceiling, preserving digest verification and progress heartbeats on slower hosted runners.
 - Calibrated the pinned 41.3 MB MinGit fallback to a finite 15-minute download window with a 45 MB ceiling, preserving digest verification and progress heartbeats on slower hosted runners.
 - Bounded the canonical MSYS2 fallback download, extraction, and staging phases with exact byte limits, finite timeouts, factual heartbeats, and stage-specific failures instead of one silent bootstrap interval.
 - Forced keyring setup through the validated bundled MSYS2 `bash.exe`, preventing the Windows WSL launcher from intercepting `pacman-key` through its environment-based shebang.
