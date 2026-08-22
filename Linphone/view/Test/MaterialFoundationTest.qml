@@ -15,8 +15,11 @@ Item {
         && MaterialTheme.onSurface.a === 1
     property bool typographyContractValid: MaterialType.bodyLarge.pixelSize > MaterialType.bodySmall.pixelSize
         && MaterialType.headlineLarge.pixelSize > MaterialType.titleLarge.pixelSize
+    property bool adaptiveContractValid: adaptiveShell.navigationModel.length === 3
+        && adaptiveShell.currentIndex === 0
 
     AdaptivePhoneShell {
+        id: adaptiveShell
         anchors.fill: parent
         navigationModel: [
             { label: "Calls", description: "Call history and dial pad" },

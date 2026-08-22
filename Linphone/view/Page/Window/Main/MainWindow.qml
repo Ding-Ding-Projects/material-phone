@@ -344,18 +344,35 @@ AbstractWindow {
 	}
 	Component {
 		id: mainPage
-		MainLayout {
-			id: mainLayout
+		AdaptivePhoneShell {
+			id: adaptivePhoneShell
 			objectName: "mainPage"
-			onAddAccountRequest: goToLogin()
-			onAccountRemoved: {
-				initStackViewItem()
+			navigationModel: mainLayout.adaptiveNavigationModel
+			currentIndex: mainLayout.adaptiveNavigationPosition
+			onDestinationActivated: position => mainLayout.activateAdaptiveDestination(position)
+
+			function goToNewCall() { mainLayout.goToNewCall() }
+			function goToCallHistory() { mainLayout.goToCallHistory() }
+			function displayContactPage(contactAddress) { mainLayout.displayContactPage(contactAddress) }
+			function displayChatPage(contactAddress) { mainLayout.displayChatPage(contactAddress) }
+			function openChat(chat) { mainLayout.openChat(chat) }
+			function createContact(name, contactAddress) { mainLayout.createContact(name, contactAddress) }
+			function scheduleMeeting(subject, addresses) { mainLayout.scheduleMeeting(subject, addresses) }
+
+			MainLayout {
+				id: mainLayout
+				anchors.fill: parent
+				externalNavigationEnabled: true
+				onAddAccountRequest: goToLogin()
+				onAccountRemoved: {
+					initStackViewItem()
+				}
+				Connections {
+					target: mainWindow
+					function onCallCreated(){ mainLayout.callCreated() }
+				}
+				// StackView.onActivated: connectionSecured(0) // TODO : connect to cpp part when ready
 			}
-			Connections {
-				target: mainWindow
-				function onCallCreated(){ mainLayout.callCreated() }
-			}
-			// StackView.onActivated: connectionSecured(0) // TODO : connect to cpp part when ready
 		}
 	}
 

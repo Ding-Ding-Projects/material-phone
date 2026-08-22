@@ -15,6 +15,37 @@ Item {
     property var callObj
     property var contextualMenuOpenedComponent: undefined
     property bool focusPageOnNextLoad: false // Focus the page on next load - usefull cause of loader
+    property bool externalNavigationEnabled: false
+    readonly property var adaptiveNavigationModel: {
+        var destinations = [
+            {
+                "destinationIndex": 0,
+                "label": qsTr("bottom_navigation_calls_label"),
+                "description": qsTr("open_calls_page_accessible_name")
+            },
+            {
+                "destinationIndex": 1,
+                "label": qsTr("bottom_navigation_contacts_label"),
+                "description": qsTr("open_contacts_page_accessible_name")
+            }
+        ];
+        if (!SettingsCpp.disableChatFeature) {
+            destinations.push({
+                "destinationIndex": 2,
+                "label": qsTr("bottom_navigation_conversations_label"),
+                "description": qsTr("open_conversations_page_accessible_name")
+            });
+        }
+        if (!SettingsCpp.disableMeetingsFeature) {
+            destinations.push({
+                "destinationIndex": 3,
+                "label": qsTr("bottom_navigation_meetings_label"),
+                "description": qsTr("open_contact_page_accessible_name")
+            });
+        }
+        return destinations;
+    }
+    readonly property int adaptiveNavigationPosition: navigationPositionForDestination(tabbar.currentIndex)
 
     signal addAccountRequest
     signal openNewCallRequest
@@ -27,6 +58,32 @@ Item {
     signal createContactRequested(string name, string address)
     signal scheduleMeetingRequested(string subject, list<string> addresses)
     signal accountRemoved
+
+    function navigationPositionForDestination(destinationIndex) {
+        for (var position = 0; position < adaptiveNavigationModel.length; ++position) {
+            if (adaptiveNavigationModel[position].destinationIndex === destinationIndex)
+                return position;
+        }
+        return 0;
+    }
+
+    function activateAdaptiveDestination(position) {
+        if (position < 0 || position >= adaptiveNavigationModel.length)
+            return;
+        tabbar.currentIndex = adaptiveNavigationModel[position].destinationIndex;
+    }
+
+    onAdaptiveNavigationModelChanged: {
+        var currentDestinationVisible = false;
+        for (var position = 0; position < adaptiveNavigationModel.length; ++position) {
+            if (adaptiveNavigationModel[position].destinationIndex === tabbar.currentIndex) {
+                currentDestinationVisible = true;
+                break;
+            }
+        }
+        if (!currentDestinationVisible)
+            tabbar.currentIndex = 0;
+    }
 
     function goToNewCall() {
         tabbar.currentIndex = 0;
@@ -41,10 +98,14 @@ Item {
         mainItem.displayContactRequested(contactAddress);
     }
     function displayChatPage(contactAddress) {
+        if (SettingsCpp.disableChatFeature)
+            return;
         tabbar.currentIndex = 2;
         mainItem.displayChatRequested(contactAddress);
     }
     function openChat(chat) {
+        if (SettingsCpp.disableChatFeature)
+            return;
         tabbar.currentIndex = 2;
         mainItem.openChatRequested(chat);
     }
@@ -53,6 +114,8 @@ Item {
         mainItem.createContactRequested(name, address);
     }
     function scheduleMeeting(subject, addresses) {
+        if (SettingsCpp.disableMeetingsFeature)
+            return;
         tabbar.currentIndex = 3;
         mainItem.scheduleMeetingRequested(subject, addresses);
     }
@@ -149,8 +212,10 @@ Item {
 
             VerticalTabBar {
                 id: tabbar
+                visible: !mainItem.externalNavigationEnabled
+                enabled: visible
                 Layout.fillHeight: true
-                Layout.preferredWidth: Utils.getSizeWithScreenRatio(82)
+                Layout.preferredWidth: visible ? Utils.getSizeWithScreenRatio(82) : 0
                 defaultAccount: accountProxy.defaultAccount
                 currentIndex: 0
                 onCountChanged: if (currentIndex >= count) currentIndex = 0
