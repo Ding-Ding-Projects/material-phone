@@ -37,6 +37,8 @@ The local `main` branch contains the independent upstream snapshot plus the firs
 - No browser capture or built desktop interaction is claimed.
 - The visual-quality ultra-speed pass intentionally ran no tests, lint, accessibility automation, reviews, audits, or captures. Its changes require built-artifact verification before the corresponding roadmap items can be checked.
 - Status Hub publishing was unavailable in this session.
+- Windows dependency bootstrap now falls back to separately versioned and SHA-256-pinned canonical artifacts when `winget.exe` is absent or an install fails. Visual Studio Build Tools remains installer-managed and may instead reuse a compatible installed Visual Studio 2022 C++ toolchain; no portable distribution was falsely declared for it.
+- The bootstrap repair was source-reasoned from GitHub Actions run `32570779505` and the local non-elevated installer failure (`-1978335226`). No tests, lint, static analysis, audits, reviews, captures, or full toolchain download were run in the ultra-speed pass.
 - The feature inventory therefore keeps Status Hub `planned`; local cards are not presented as Hub implementation.
 - No verified Material Phone installer or immutable release manifest exists, so the download action remains disabled.
 - The canonical Open Graph URL exists, but a product-specific image and anonymous deployed-byte verification remain open.

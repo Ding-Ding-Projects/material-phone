@@ -68,6 +68,129 @@ function Resolve-Tool([string]$Command) {
     return $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 }
 
+function Get-FallbackInstallRoot($Tool, [string]$BaseRoot) {
+    $safeId = ([string]$Tool.id) -replace '[^A-Za-z0-9._-]', '_'
+    return Join-Path $BaseRoot "bootstrap\$safeId\$($Tool.version)"
+}
+
+function Resolve-FallbackTool($Tool, [string]$BaseRoot) {
+    if (-not $Tool.fallback) { return $null }
+    $installRoot = Get-FallbackInstallRoot $Tool $BaseRoot
+    $commandPath = Join-Path $installRoot ([string]$Tool.fallback.commandRelativePath).Replace('/', '\')
+    if (Test-Path -LiteralPath $commandPath -PathType Leaf) { return $commandPath }
+    return $null
+}
+
+function Add-ToolPath([string]$Path) {
+    if ([string]::IsNullOrWhiteSpace($Path)) { return }
+    $resolvedPath = [IO.Path]::GetFullPath($Path)
+    if (-not (($env:Path -split ';') -contains $resolvedPath)) { $env:Path = "$resolvedPath;$env:Path" }
+    if ($env:GITHUB_PATH) { Add-Content -LiteralPath $env:GITHUB_PATH -Value $resolvedPath }
+}
+
+function Get-CanonicalDownload($Fallback, [string]$DownloadRoot) {
+    $uri = [Uri]([string]$Fallback.url)
+    $allowedHosts = @(
+        'github.com',
+        'release-assets.githubusercontent.com',
+        'objects.githubusercontent.com',
+        'www.python.org',
+        'dist.nuget.org'
+    )
+    if ($uri.Scheme -ne 'https' -or $allowedHosts -notcontains $uri.Host.ToLowerInvariant()) {
+        throw "Portable fallback URL is not an allowlisted canonical HTTPS source: $uri"
+    }
+    $expectedHash = ([string]$Fallback.sha256).ToLowerInvariant()
+    if ($expectedHash -notmatch '^[0-9a-f]{64}$') { throw "Portable fallback SHA-256 is invalid for $uri." }
+    New-Item -ItemType Directory -Force -Path $DownloadRoot | Out-Null
+    $leaf = [IO.Path]::GetFileName($uri.AbsolutePath)
+    if ([string]::IsNullOrWhiteSpace($leaf)) { throw "Portable fallback URL has no artifact filename: $uri" }
+    $destination = Join-Path $DownloadRoot "$expectedHash-$leaf"
+    if (Test-Path -LiteralPath $destination -PathType Leaf) {
+        $cachedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()
+        if ($cachedHash -eq $expectedHash) { return $destination }
+        Remove-Item -LiteralPath $destination -Force
+    }
+    $temporary = "$destination.partial-$PID"
+    try {
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $uri.AbsoluteUri -OutFile $temporary -PassThru
+        $finalUri = $response.BaseResponse.ResponseUri
+        if ($finalUri -and ($finalUri.Scheme -ne 'https' -or $allowedHosts -notcontains $finalUri.Host.ToLowerInvariant())) {
+            throw "Portable fallback redirected outside the canonical host allowlist: $finalUri"
+        }
+        $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $temporary).Hash.ToLowerInvariant()
+        if ($actualHash -ne $expectedHash) { throw "Portable fallback digest mismatch for $uri. Expected $expectedHash; received $actualHash." }
+        Move-Item -LiteralPath $temporary -Destination $destination
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+    }
+    return $destination
+}
+
+function Install-FallbackTool($Tool, [string]$BaseRoot) {
+    if (-not $Tool.fallback) { return $null }
+    $fallback = $Tool.fallback
+    $supportedKinds = @('zip', 'tar', 'exe', 'file')
+    if ($supportedKinds -notcontains [string]$fallback.kind) { throw "Unsupported portable fallback kind for $($Tool.id): $($fallback.kind)." }
+    $installRoot = Get-FallbackInstallRoot $Tool $BaseRoot
+    $commandPath = Join-Path $installRoot ([string]$fallback.commandRelativePath).Replace('/', '\')
+    $artifact = Get-CanonicalDownload $fallback (Join-Path $BaseRoot 'downloads')
+    if (-not (Test-Path -LiteralPath $commandPath -PathType Leaf)) {
+        if (Test-Path -LiteralPath $installRoot) { Remove-Item -LiteralPath $installRoot -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
+        switch ([string]$fallback.kind) {
+            'zip' {
+                $extractRoot = "$installRoot.extract-$PID"
+                try {
+                    Expand-Archive -LiteralPath $artifact -DestinationPath $extractRoot -Force
+                    $sourceRoot = $extractRoot
+                    if ($fallback.stripSingleDirectory) {
+                        $children = @(Get-ChildItem -LiteralPath $extractRoot)
+                        if ($children.Count -ne 1 -or -not $children[0].PSIsContainer) { throw "Portable fallback archive for $($Tool.id) does not contain one root directory." }
+                        $sourceRoot = $children[0].FullName
+                    }
+                    Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $installRoot -Recurse -Force
+                }
+                finally {
+                    if (Test-Path -LiteralPath $extractRoot) { Remove-Item -LiteralPath $extractRoot -Recurse -Force }
+                }
+            }
+            'tar' {
+                $extractRoot = "$installRoot.extract-$PID"
+                try {
+                    New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+                    & tar.exe -xf $artifact -C $extractRoot
+                    if ($LASTEXITCODE -ne 0) { throw "Portable fallback extraction failed for $($Tool.id) (exit $LASTEXITCODE)." }
+                    $sourceRoot = $extractRoot
+                    if ($fallback.stripSingleDirectory) {
+                        $children = @(Get-ChildItem -LiteralPath $extractRoot)
+                        if ($children.Count -ne 1 -or -not $children[0].PSIsContainer) { throw "Portable fallback archive for $($Tool.id) does not contain one root directory." }
+                        $sourceRoot = $children[0].FullName
+                    }
+                    Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $installRoot -Recurse -Force
+                }
+                finally {
+                    if (Test-Path -LiteralPath $extractRoot) { Remove-Item -LiteralPath $extractRoot -Recurse -Force }
+                }
+            }
+            'exe' {
+                $arguments = @($fallback.arguments | ForEach-Object { ([string]$_).Replace('{installRoot}', $installRoot) })
+                & $artifact @arguments | Out-Host
+                if ($LASTEXITCODE -ne 0) { throw "Portable fallback installer failed for $($Tool.id) (exit $LASTEXITCODE)." }
+            }
+            'file' { Copy-Item -LiteralPath $artifact -Destination $commandPath -Force }
+        }
+    }
+    if (-not (Test-Path -LiteralPath $commandPath -PathType Leaf)) { throw "Portable fallback did not provide the declared command for $($Tool.id): $commandPath" }
+    Add-ToolPath (Split-Path -Parent $commandPath)
+    foreach ($relativePath in @($fallback.additionalPathRelativePaths)) {
+        Add-ToolPath (Join-Path $installRoot ([string]$relativePath).Replace('/', '\'))
+    }
+    Write-Phase "Using canonical fallback for $($Tool.id) $($Tool.version) at $commandPath."
+    return $commandPath
+}
+
 if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Dependency manifest is missing: $manifestPath"
 }
@@ -115,52 +238,94 @@ if (-not $isAdmin -and $Silent) {
 }
 
 $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-if (-not $winget) {
-    throw 'winget.exe is unavailable. A current Windows App Installer is required to bootstrap the pinned toolchain without manual downloads.'
-}
-
+$resolvedTools = @{}
 foreach ($tool in $manifest.winget) {
-    $catalog = & $winget.Source show --exact --id ([string]$tool.id) --version ([string]$tool.version) --source winget --accept-source-agreements --disable-interactivity
-    if ($LASTEXITCODE -ne 0) { throw "Pinned winget package is unavailable: $($tool.id) $($tool.version)." }
-    $catalogHashLine = $catalog | Select-String -Pattern '^\s*Installer SHA256:\s*([0-9a-fA-F]{64})\s*$' | Select-Object -First 1
-    if (-not $catalogHashLine -or $catalogHashLine.Matches[0].Groups[1].Value.ToLowerInvariant() -ne ([string]$tool.sha256).ToLowerInvariant()) {
-        throw "winget catalog digest does not match dependencies.manifest.json for $($tool.id) $($tool.version)."
-    }
-    $existing = Resolve-Tool $tool.command
-    & $winget.Source list --exact --id ([string]$tool.id) --version ([string]$tool.version) --source winget --accept-source-agreements --disable-interactivity *> $null
-    $exactVersionInstalled = $LASTEXITCODE -eq 0
-    if ($existing -and $exactVersionInstalled) {
-        Write-Phase "Found exact $($tool.id) $($tool.version) at $existing; reusing it."
+    $fallbackCommand = Resolve-FallbackTool $tool $toolRoot
+    if ($fallbackCommand) {
+        $resolvedTools[[string]$tool.command] = Install-FallbackTool $tool $toolRoot
         continue
     }
-    Write-Phase "Installing $($tool.id) $($tool.version) from the canonical winget source."
-    $arguments = @(
-        'install', '--exact', '--id', [string]$tool.id,
-        '--version', [string]$tool.version,
-        '--source', 'winget', '--accept-package-agreements',
-        '--accept-source-agreements', '--disable-interactivity', '--force'
-    )
-    if ($tool.override) {
-        $arguments += @('--override', [Environment]::ExpandEnvironmentVariables([string]$tool.override))
+
+    $wingetFailure = if ($winget) { $null } else { 'winget.exe is unavailable' }
+    if ($winget) {
+        $catalog = & $winget.Source show --exact --id ([string]$tool.id) --version ([string]$tool.version) --source winget --accept-source-agreements --disable-interactivity
+        if ($LASTEXITCODE -eq 0) {
+            $catalogHashLine = $catalog | Select-String -Pattern '^\s*Installer SHA256:\s*([0-9a-fA-F]{64})\s*$' | Select-Object -First 1
+            if (-not $catalogHashLine -or $catalogHashLine.Matches[0].Groups[1].Value.ToLowerInvariant() -ne ([string]$tool.sha256).ToLowerInvariant()) {
+                throw "winget catalog digest does not match dependencies.manifest.json for $($tool.id) $($tool.version)."
+            }
+            $existing = Resolve-Tool $tool.command
+            & $winget.Source list --exact --id ([string]$tool.id) --version ([string]$tool.version) --source winget --accept-source-agreements --disable-interactivity *> $null
+            if ($existing -and $LASTEXITCODE -eq 0) {
+                Write-Phase "Found exact $($tool.id) $($tool.version) at $existing; reusing it."
+                $resolvedTools[[string]$tool.command] = $existing
+                continue
+            }
+            Write-Phase "Installing $($tool.id) $($tool.version) from the canonical winget source."
+            $arguments = @(
+                'install', '--exact', '--id', [string]$tool.id,
+                '--version', [string]$tool.version,
+                '--source', 'winget', '--accept-package-agreements',
+                '--accept-source-agreements', '--disable-interactivity', '--force'
+            )
+            if ($tool.override) {
+                $arguments += @('--override', [Environment]::ExpandEnvironmentVariables([string]$tool.override))
+            }
+            & $winget.Source @arguments | Out-Host
+            if ($LASTEXITCODE -eq 0) {
+                $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+                $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+                $env:Path = "$machinePath;$userPath;$env:Path"
+                $installedCommand = Resolve-Tool $tool.command
+                if ($installedCommand) {
+                    $resolvedTools[[string]$tool.command] = $installedCommand
+                    continue
+                }
+                $wingetFailure = 'winget exited successfully but the declared command was unavailable'
+            }
+            else {
+                $wingetFailure = "winget install exited $LASTEXITCODE"
+            }
+        }
+        else {
+            $wingetFailure = "winget show exited $LASTEXITCODE"
+        }
     }
-    & $winget.Source @arguments | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-        throw "winget could not install $($tool.id) $($tool.version) (exit $LASTEXITCODE)."
+
+    if ($tool.fallback) {
+        Write-Phase "$wingetFailure for $($tool.id) $($tool.version); switching to its declared canonical fallback."
+        $resolvedTools[[string]$tool.command] = Install-FallbackTool $tool $toolRoot
+        continue
     }
+
+    if ([string]$tool.command -eq 'vswhere') {
+        $vswhere = Resolve-Tool 'vswhere'
+        if ($vswhere) {
+            $compatibleVisualStudio = & $vswhere -latest -products '*' -version '[17.0,18.0)' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($compatibleVisualStudio | Select-Object -First 1))) {
+                Write-Phase "$wingetFailure for $($tool.id) $($tool.version); reusing the compatible installed Visual Studio 2022 C++ toolchain."
+                $resolvedTools[[string]$tool.command] = $vswhere
+                continue
+            }
+        }
+    }
+    throw "$wingetFailure for $($tool.id) $($tool.version), no declared fallback is available, and no compatible installed toolchain was found."
 }
 
 # Refresh only this process. Package-manager changes normally affect future shells.
 $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-$env:Path = "$machinePath;$userPath;$env:Path;C:\msys64\usr\bin;C:\msys64\mingw64\bin"
+$env:Path = "$machinePath;$userPath;$env:Path"
 
-$python = Get-Command py.exe -ErrorAction SilentlyContinue
-if (-not $python) { throw 'Python 3.11 was installed but py.exe is still unavailable after PATH refresh.' }
+$python = $resolvedTools['py']
+if (-not $python) { $python = Resolve-Tool 'py' }
+if (-not $python) { throw 'Python 3.11 bootstrap completed but no declared Python command is available.' }
 $venv = Join-Path $toolRoot 'python'
 $venvPython = Join-Path $venv 'Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $venvPython)) {
     Write-Phase "Creating the project-local Python tool environment at $venv."
-    & $python.Source -3.11 -m venv $venv | Out-Host
+    if ([IO.Path]::GetFileName($python) -ieq 'py.exe') { & $python -3.11 -m venv $venv | Out-Host }
+    else { & $python -m venv $venv | Out-Host }
     if ($LASTEXITCODE -ne 0) { throw 'Python could not create the project-local tool environment.' }
 }
 foreach ($package in $manifest.python.packages) {
@@ -188,8 +353,9 @@ if ($missingQt.Count -ne 0) {
     throw "Qt installation completed with missing declared proofs: $($missingQt -join ', ')."
 }
 
-$pacman = Resolve-Tool 'pacman'
-if (-not $pacman) { throw 'MSYS2 was installed but pacman.exe is unavailable at C:\msys64\usr\bin.' }
+$pacman = $resolvedTools['pacman']
+if (-not $pacman) { $pacman = Resolve-Tool 'pacman' }
+if (-not $pacman) { throw 'MSYS2 bootstrap completed but pacman.exe is unavailable.' }
 Write-Phase 'Refreshing the MSYS2 package database and installing the pinned manifest package set.'
 & $pacman -Syu --noconfirm | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 database refresh failed (exit $LASTEXITCODE)." }
@@ -197,9 +363,12 @@ if ($LASTEXITCODE -ne 0) { throw "MSYS2 database refresh failed (exit $LASTEXITC
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 package installation failed (exit $LASTEXITCODE)." }
 
 Write-Phase 'Initializing only public, manifest-listed submodules.'
-& git -C $repoRoot submodule sync -- @($manifest.submodules.path) | Out-Host
+$git = $resolvedTools['git']
+if (-not $git) { $git = Resolve-Tool 'git' }
+if (-not $git) { throw 'Git bootstrap completed but git.exe is unavailable.' }
+& $git -C $repoRoot submodule sync -- @($manifest.submodules.path) | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Public submodule synchronization failed.' }
-& git -C $repoRoot submodule update --init --jobs 4 -- @($manifest.submodules.path) | Out-Host
+& $git -C $repoRoot submodule update --init --jobs 4 -- @($manifest.submodules.path) | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Public submodule initialization failed.' }
 
 $elapsed = (Get-Date) - $startedAt

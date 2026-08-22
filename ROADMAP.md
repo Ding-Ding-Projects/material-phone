@@ -36,6 +36,7 @@
 ## Evidence and delivery
 
 - [x] Add pinned, one-click Windows dependency, build, and installer entry points.
+- [x] Add canonical, separately hashed fallback bootstrap routes for missing or unusable Windows Package Manager installations.
 - [x] Add an unsigned Squirrel.Windows packaging contract and negative signing regression.
 - [x] Add a GitHub Pages deployment workflow for the static documentation source.
 - [x] Remove the inaccessible private feature-specification gitlink from the public source tree.

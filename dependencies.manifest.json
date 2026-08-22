@@ -7,25 +7,58 @@
       "id": "Git.Git",
       "version": "2.51.0",
       "sha256": "843037416371600a7f289be8fe2b2224afe1c1bb0736bbab7b3ff393e6a7aaf2",
-      "command": "git"
+      "command": "git",
+      "fallback": {
+        "kind": "zip",
+        "url": "https://github.com/git-for-windows/git/releases/download/v2.51.0.windows.1/MinGit-2.51.0-64-bit.zip",
+        "sha256": "c2c955a21fa99889d83f485f24fa5d9a38fffc2d509d4022385510e11c26b250",
+        "commandRelativePath": "cmd/git.exe"
+      }
     },
     {
       "id": "Kitware.CMake",
       "version": "3.31.6",
       "sha256": "4cc39d59426cbbeb33d0daff1350e39b0585a90e3c9883dbba70816b8d282811",
-      "command": "cmake"
+      "command": "cmake",
+      "fallback": {
+        "kind": "zip",
+        "url": "https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-windows-x86_64.zip",
+        "sha256": "d163cd3ab4959b0a53fa8988f2ddbd2e6c501658201e6a154386bad9dbe4f836",
+        "stripSingleDirectory": true,
+        "commandRelativePath": "bin/cmake.exe"
+      }
     },
     {
       "id": "Ninja-build.Ninja",
       "version": "1.12.1",
       "sha256": "f550fec705b6d6ff58f2db3c374c2277a37691678d6aba463adcbb129108467a",
-      "command": "ninja"
+      "command": "ninja",
+      "fallback": {
+        "kind": "zip",
+        "url": "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip",
+        "sha256": "f550fec705b6d6ff58f2db3c374c2277a37691678d6aba463adcbb129108467a",
+        "commandRelativePath": "ninja.exe"
+      }
     },
     {
       "id": "Python.Python.3.11",
       "version": "3.11.9",
       "sha256": "5ee42c4eee1e6b4464bb23722f90b45303f79442df63083f05322f1785f5fdde",
-      "command": "py"
+      "command": "py",
+      "fallback": {
+        "kind": "exe",
+        "url": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe",
+        "sha256": "5ee42c4eee1e6b4464bb23722f90b45303f79442df63083f05322f1785f5fdde",
+        "arguments": [
+          "/quiet",
+          "InstallAllUsers=0",
+          "Include_launcher=0",
+          "Include_test=0",
+          "PrependPath=0",
+          "TargetDir={installRoot}"
+        ],
+        "commandRelativePath": "python.exe"
+      }
     },
     {
       "id": "Microsoft.VisualStudio.2022.BuildTools",
@@ -38,13 +71,29 @@
       "id": "MSYS2.MSYS2",
       "version": "20260611",
       "sha256": "3150d7d9aa5dedd900a7f52300d4d918271e3a8fc47de94848818fd5a430e6b0",
-      "command": "pacman"
+      "command": "pacman",
+      "fallback": {
+        "kind": "tar",
+        "url": "https://github.com/msys2/msys2-installer/releases/download/2026-06-11/msys2-base-x86_64-20260611.tar.xz",
+        "sha256": "a2d047e8ee213c3c6a49a8de427eb1069df12207c0422ff1b3cbb5c905c34221",
+        "stripSingleDirectory": true,
+        "commandRelativePath": "usr/bin/pacman.exe",
+        "additionalPathRelativePaths": [
+          "mingw64/bin"
+        ]
+      }
     },
     {
       "id": "Microsoft.NuGet",
       "version": "6.12.1",
       "sha256": "0790bb7a0c898e44b70f2b65e3070b4db8af23897e38b8653d72d268b6e8bb11",
-      "command": "nuget"
+      "command": "nuget",
+      "fallback": {
+        "kind": "file",
+        "url": "https://dist.nuget.org/win-x86-commandline/v6.12.1/nuget.exe",
+        "sha256": "0790bb7a0c898e44b70f2b65e3070b4db8af23897e38b8653d72d268b6e8bb11",
+        "commandRelativePath": "nuget.exe"
+      }
     }
   ],
   "python": {

@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Added separately pinned canonical fallback artifacts for the Windows build toolchain when Windows Package Manager is missing or cannot complete a non-interactive install; catalog digest mismatches still fail closed.
 - Made generated-output freshness fail before the generator writes, with a deliberate stale-output red/green regression.
 - Staged website and documentation under one Pages artifact and added artifact-level existence and link checks.
 - Repaired deployed documentation-card paths through generated build metadata.
