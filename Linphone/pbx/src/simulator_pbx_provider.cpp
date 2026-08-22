@@ -23,6 +23,33 @@ PbxError rate_limited() {
     return result;
 }
 
+bool valid_identifier(const std::string &value) {
+    return !value.empty() && value.size() <= kMaxIdentifierBytes &&
+           std::find(value.begin(), value.end(), '\0') == value.end();
+}
+
+const char *resource_kind_name(const ResourceKind kind) {
+    switch (kind) {
+    case ResourceKind::Extension:
+        return "extension";
+    case ResourceKind::Queue:
+        return "queue";
+    case ResourceKind::Trunk:
+        return "trunk";
+    case ResourceKind::Call:
+        return "call";
+    case ResourceKind::Presence:
+        return "presence";
+    }
+    return "unknown";
+}
+
+std::chrono::system_clock::time_point event_time(
+    const SimulatorOptions &options, const std::uint64_t sequence) {
+    return options.clock_epoch +
+           std::chrono::seconds{static_cast<std::chrono::seconds::rep>(sequence - 1)};
+}
+
 std::string fingerprint(const PbxCommand &command) {
     std::ostringstream stream;
     stream << static_cast<int>(command.kind) << '\n' << command.target_id << '\n';
@@ -110,6 +137,9 @@ public:
         }
 
         std::lock_guard<std::mutex> lock(mutex_);
+        if (auto checked = preflight(context); !checked) {
+            return Result<Page<PbxResource>>::failure(checked.error());
+        }
         std::vector<PbxResource> matching;
         for (const auto &resource : resources_) {
             if (resource.kind == kind) {
@@ -136,11 +166,15 @@ public:
         if (auto checked = preflight(context); !checked) {
             return Result<PbxResource>::failure(checked.error());
         }
-        if (id.empty() || id.size() > kMaxIdentifierBytes) {
+        if (!valid_identifier(id)) {
             return Result<PbxResource>::failure(
-                error(ErrorCode::InvalidArgument, "resource id is empty or oversized"));
+                error(ErrorCode::InvalidArgument,
+                      "resource id is empty, oversized, or contains NUL"));
         }
         std::lock_guard<std::mutex> lock(mutex_);
+        if (auto checked = preflight(context); !checked) {
+            return Result<PbxResource>::failure(checked.error());
+        }
         const auto found = find_resource(id);
         if (found == resources_.end()) {
             return Result<PbxResource>::failure(
@@ -163,6 +197,9 @@ public:
         }
 
         std::lock_guard<std::mutex> lock(mutex_);
+        if (auto checked = preflight(context); !checked) {
+            return Result<CommandReceipt>::failure(checked.error());
+        }
         const std::string command_fingerprint = fingerprint(command);
         const auto replay = receipts_.find(command.idempotency_key);
         if (replay != receipts_.end()) {
@@ -181,6 +218,18 @@ public:
             return Result<CommandReceipt>::failure(
                 error(ErrorCode::NotFound, "command target does not exist"));
         }
+        const ResourceKind required_kind =
+            command.kind == CommandKind::StartCall || command.kind == CommandKind::EndCall
+                ? ResourceKind::Call
+                : ResourceKind::Queue;
+        if (command.kind != CommandKind::UpdateResource && found->kind != required_kind) {
+            PbxError incompatible = error(
+                ErrorCode::InvalidArgument,
+                "command is not compatible with the target resource kind");
+            incompatible.details = {{"actual_kind", resource_kind_name(found->kind)},
+                                    {"required_kind", resource_kind_name(required_kind)}};
+            return Result<CommandReceipt>::failure(std::move(incompatible));
+        }
         if (options_.state == SimulatorState::Conflict) {
             return Result<CommandReceipt>::failure(
                 error(ErrorCode::Conflict, "simulator injected a revision conflict"));
@@ -192,8 +241,50 @@ public:
             return Result<CommandReceipt>::failure(std::move(conflict));
         }
 
+        std::map<std::string, std::string> mutations;
+        EventKind event_kind = EventKind::Updated;
+        switch (command.kind) {
+        case CommandKind::UpdateResource:
+            mutations = command.arguments;
+            break;
+        case CommandKind::StartCall:
+            if (!command.arguments.empty()) {
+                return Result<CommandReceipt>::failure(error(
+                    ErrorCode::InvalidArgument,
+                    "start-call does not accept provider-neutral arguments"));
+            }
+            mutations.emplace("state", "connected");
+            event_kind = EventKind::CallStateChanged;
+            break;
+        case CommandKind::EndCall:
+            if (!command.arguments.empty()) {
+                return Result<CommandReceipt>::failure(error(
+                    ErrorCode::InvalidArgument,
+                    "end-call does not accept provider-neutral arguments"));
+            }
+            mutations.emplace("state", "ended");
+            event_kind = EventKind::CallStateChanged;
+            break;
+        case CommandKind::PauseQueue:
+            if (!command.arguments.empty()) {
+                return Result<CommandReceipt>::failure(error(
+                    ErrorCode::InvalidArgument,
+                    "pause-queue does not accept provider-neutral arguments"));
+            }
+            mutations.emplace("paused", "true");
+            break;
+        case CommandKind::ResumeQueue:
+            if (!command.arguments.empty()) {
+                return Result<CommandReceipt>::failure(error(
+                    ErrorCode::InvalidArgument,
+                    "resume-queue does not accept provider-neutral arguments"));
+            }
+            mutations.emplace("paused", "false");
+            break;
+        }
+
         std::size_t resulting_attribute_count = found->attributes.size();
-        for (const auto &[key, value] : command.arguments) {
+        for (const auto &[key, value] : mutations) {
             (void)value;
             if (found->attributes.find(key) == found->attributes.end()) {
                 ++resulting_attribute_count;
@@ -210,12 +301,8 @@ public:
                 "simulator idempotency record bound has been reached"));
         }
 
-        if (command.kind == CommandKind::UpdateResource) {
-            for (const auto &[key, value] : command.arguments) {
-                found->attributes[key] = value;
-            }
-        } else {
-            found->attributes["last_command"] = std::to_string(static_cast<int>(command.kind));
+        for (const auto &[key, value] : mutations) {
+            found->attributes[key] = value;
         }
         ++found->revision;
         ++snapshot_revision_;
@@ -226,14 +313,16 @@ public:
                                found->revision};
         receipts_.emplace(command.idempotency_key,
                           StoredReceipt{command_fingerprint, receipt});
-        events_.push_back(PbxEvent{next_event_sequence_++,
-                                   EventKind::Updated,
+        const std::uint64_t event_sequence = next_event_sequence_++;
+        std::map<std::string, std::string> event_payload = mutations;
+        event_payload.emplace("command_id", receipt.command_id);
+        events_.push_back(PbxEvent{event_sequence,
+                                   event_kind,
                                    found->id,
                                    found->revision,
                                    found->schema_version,
-                                   options_.clock_epoch +
-                                       std::chrono::seconds{static_cast<long long>(events_.size())},
-                                   {{"command_id", receipt.command_id}}});
+                                   event_time(options_, event_sequence),
+                                   std::move(event_payload)});
         if (events_.size() > kMaxSimulatorEvents) {
             events_.erase(events_.begin());
         }
@@ -252,16 +341,17 @@ public:
             return Result<Page<PbxEvent>>::failure(
                 error(ErrorCode::PermissionDenied, "session cannot read events"));
         }
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (!events_.empty() && page.after_sequence < events_.front().sequence - 1) {
-                PbxError gap = error(ErrorCode::EventGap,
-                                     "requested event sequence is no longer retained");
-                gap.details = {
-                    {"first_available_sequence", std::to_string(events_.front().sequence)},
-                    {"requested_after_sequence", std::to_string(page.after_sequence)}};
-                return Result<Page<PbxEvent>>::failure(std::move(gap));
-            }
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (auto checked = preflight(context); !checked) {
+            return Result<Page<PbxEvent>>::failure(checked.error());
+        }
+        if (!events_.empty() && page.after_sequence < events_.front().sequence - 1) {
+            PbxError gap = error(ErrorCode::EventGap,
+                                 "requested event sequence is no longer retained");
+            gap.details = {
+                {"first_available_sequence", std::to_string(events_.front().sequence)},
+                {"requested_after_sequence", std::to_string(page.after_sequence)}};
+            return Result<Page<PbxEvent>>::failure(std::move(gap));
         }
         if (options_.state == SimulatorState::EventGap && page.after_sequence < 3) {
             PbxError gap = error(ErrorCode::EventGap, "event history contains a deliberate gap");
@@ -269,8 +359,6 @@ public:
                            {"requested_after_sequence", std::to_string(page.after_sequence)}};
             return Result<Page<PbxEvent>>::failure(std::move(gap));
         }
-
-        std::lock_guard<std::mutex> lock(mutex_);
         Page<PbxEvent> result;
         result.snapshot_revision = snapshot_revision_;
         for (const auto &event : events_) {
@@ -318,16 +406,16 @@ private:
             {"queue-main", ResourceKind::Queue, "Main queue", 11, v1,
              {{"members", "2"}, {"paused", "false"}}},
             {"call-demo", ResourceKind::Call, "Demonstration call", 2, v2,
-             {{"state", "connected"}}}};
+             {{"state", "ringing"}}}};
         events_ = {
-            {1, EventKind::Created, "ext-100", 1, v1, options_.clock_epoch,
+            {1, EventKind::Created, "ext-100", 1, v1, event_time(options_, 1),
              {{"source", "seed"}}},
             {2, EventKind::Updated, "ext-100", 7, v1,
-             options_.clock_epoch + std::chrono::seconds{1}, {{"state", "available"}}},
+             event_time(options_, 2), {{"state", "available"}}},
             {3, EventKind::Created, "ext-101", 1, v2,
-             options_.clock_epoch + std::chrono::seconds{2}, {{"source", "seed"}}},
+             event_time(options_, 3), {{"source", "seed"}}},
             {4, EventKind::CallStateChanged, "call-demo", 2, v2,
-             options_.clock_epoch + std::chrono::seconds{3}, {{"state", "connected"}}}};
+             event_time(options_, 4), {{"state", "ringing"}}}};
         next_event_sequence_ = 5;
     }
 

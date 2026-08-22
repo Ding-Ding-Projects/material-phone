@@ -21,28 +21,5 @@ else()
     target_compile_options(material_phone_pbx_tests PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-set(PBX_TEST_CASES
-    healthy_capabilities
-    pagination
-    bounded_validation
-    cumulative_attribute_bound
-    cancellation
-    deadline
-    offline
-    unauthorized
-    partial_permission
-    rate_limited
-    event_gap
-    injected_conflict
-    revision_conflict
-    idempotent_replay
-    idempotency_collision
-    mixed_version
-    unsupported_version
-    event_after_command
-)
-
-foreach(test_case IN LISTS PBX_TEST_CASES)
-    add_test(NAME "pbx.${test_case}"
-             COMMAND material_phone_pbx_tests "${test_case}")
-endforeach()
+add_test(NAME pbx.registry_list COMMAND material_phone_pbx_tests --list)
+add_test(NAME pbx.all COMMAND material_phone_pbx_tests --all)

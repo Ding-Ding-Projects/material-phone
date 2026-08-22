@@ -6,6 +6,8 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace pbx = material_phone::pbx;
 
@@ -37,6 +39,13 @@ pbx::PbxCommand update_command(const std::string &key,
             key,
             expected_revision,
             {{"state", "away"}}};
+}
+
+pbx::PbxCommand control_command(const pbx::CommandKind kind,
+                                std::string target,
+                                std::string key,
+                                const std::uint64_t expected_revision) {
+    return {kind, std::move(target), std::move(key), expected_revision, {}};
 }
 
 void healthy_capabilities() {
@@ -77,7 +86,7 @@ void bounded_validation() {
             "opaque cursor syntax must be validated");
 }
 
-void cumulative_attribute_bound() {
+void exact_attribute_ceiling() {
     auto session = open(pbx::SimulatorState::Healthy);
     auto first = update_command("attribute-bound-1");
     first.arguments.clear();
@@ -89,12 +98,147 @@ void cumulative_attribute_bound() {
 
     auto second = update_command("attribute-bound-2", applied.value().resource_revision);
     second.arguments.clear();
-    for (std::size_t index = 0; index < pbx::kMaxCommandArguments; ++index) {
+    for (std::size_t index = 0; index < pbx::kMaxCommandArguments - 2; ++index) {
         second.arguments.emplace("second-" + std::to_string(index), "value");
     }
-    auto rejected = session->execute(second, {});
+    auto filled = session->execute(second, {});
+    require(filled.has_value(), "command must be able to fill the exact 64-attribute ceiling");
+
+    auto replace = update_command("attribute-bound-replace", filled.value().resource_revision);
+    replace.arguments = {{"state", "busy"}};
+    auto replaced = session->execute(replace, {});
+    require(replaced.has_value(), "replacing an attribute at the ceiling must remain valid");
+
+    auto overflow = update_command("attribute-bound-overflow",
+                                   replaced.value().resource_revision);
+    overflow.arguments = {{"sixty-fifth", "nope"}};
+    auto rejected = session->execute(overflow, {});
     require(!rejected && rejected.error().code == pbx::ErrorCode::ResourceExhausted,
-            "cumulative resource attributes must remain bounded");
+            "the sixty-fifth attribute must be rejected");
+}
+
+void embedded_nul_id() {
+    auto session = open(pbx::SimulatorState::Healthy);
+    const std::string id{"ext-100\0suffix", 14};
+    auto result = session->get_resource(id, {});
+    require(!result && result.error().code == pbx::ErrorCode::InvalidArgument,
+            "embedded NUL resource identifiers must fail validation");
+}
+
+void invalid_resource_kinds() {
+    auto session = open(pbx::SimulatorState::Healthy);
+    auto pause_extension = session->execute(
+        control_command(pbx::CommandKind::PauseQueue, "ext-100", "bad-pause", 7), {});
+    require(!pause_extension && pause_extension.error().code == pbx::ErrorCode::InvalidArgument,
+            "queue commands must reject extension targets");
+    require(pause_extension.error().details.at("required_kind") == "queue",
+            "queue mismatch must name the required resource kind");
+    auto resume_call = session->execute(
+        control_command(pbx::CommandKind::ResumeQueue, "call-demo", "bad-resume", 2), {});
+    require(!resume_call && resume_call.error().code == pbx::ErrorCode::InvalidArgument,
+            "resume-queue must reject call targets");
+
+    auto start_queue = session->execute(
+        control_command(pbx::CommandKind::StartCall, "queue-main", "bad-call", 11), {});
+    require(!start_queue && start_queue.error().code == pbx::ErrorCode::InvalidArgument,
+            "call commands must reject queue targets");
+    require(start_queue.error().details.at("required_kind") == "call",
+            "call mismatch must name the required resource kind");
+    auto end_extension = session->execute(
+        control_command(pbx::CommandKind::EndCall, "ext-100", "bad-end", 7), {});
+    require(!end_extension && end_extension.error().code == pbx::ErrorCode::InvalidArgument,
+            "end-call must reject extension targets");
+}
+
+void call_state_commands() {
+    auto session = open(pbx::SimulatorState::Healthy);
+    auto ringing = session->get_resource("call-demo", {});
+    require(ringing && ringing.value().attributes.at("state") == "ringing",
+            "seeded call must begin in ringing state");
+    auto started = session->execute(
+        control_command(pbx::CommandKind::StartCall, "call-demo", "start-call", 2), {});
+    require(started && started.value().resource_revision == 3,
+            "start-call must increment the call revision");
+    auto connected = session->get_resource("call-demo", {});
+    require(connected && connected.value().attributes.at("state") == "connected",
+            "start-call must set connected state");
+
+    auto ended = session->execute(
+        control_command(pbx::CommandKind::EndCall, "call-demo", "end-call", 3), {});
+    require(ended && ended.value().resource_revision == 4,
+            "end-call must increment the call revision");
+    auto finished = session->get_resource("call-demo", {});
+    require(finished && finished.value().attributes.at("state") == "ended",
+            "end-call must set ended state");
+
+    auto events = session->read_events({4, 10}, {});
+    require(events && events.value().items.size() == 2,
+            "call commands must emit two events");
+    require(events.value().items[0].kind == pbx::EventKind::CallStateChanged &&
+                events.value().items[0].payload.at("state") == "connected" &&
+                events.value().items[1].kind == pbx::EventKind::CallStateChanged &&
+                events.value().items[1].payload.at("state") == "ended",
+            "call events must carry their command-specific state transitions");
+}
+
+void queue_state_commands() {
+    auto session = open(pbx::SimulatorState::Healthy);
+    auto paused = session->execute(
+        control_command(pbx::CommandKind::PauseQueue, "queue-main", "pause", 11), {});
+    require(paused && paused.value().resource_revision == 12,
+            "pause-queue must increment the queue revision");
+    auto paused_queue = session->get_resource("queue-main", {});
+    require(paused_queue && paused_queue.value().attributes.at("paused") == "true",
+            "pause-queue must persist paused state");
+
+    auto resumed = session->execute(
+        control_command(pbx::CommandKind::ResumeQueue, "queue-main", "resume", 12), {});
+    require(resumed && resumed.value().resource_revision == 13,
+            "resume-queue must increment the queue revision");
+    auto resumed_queue = session->get_resource("queue-main", {});
+    require(resumed_queue && resumed_queue.value().attributes.at("paused") == "false",
+            "resume-queue must persist resumed state");
+
+    auto events = session->read_events({4, 10}, {});
+    require(events && events.value().items.size() == 2,
+            "queue commands must emit two events");
+    require(events.value().items[0].kind == pbx::EventKind::Updated &&
+                events.value().items[0].payload.at("paused") == "true" &&
+                events.value().items[1].kind == pbx::EventKind::Updated &&
+                events.value().items[1].payload.at("paused") == "false",
+            "queue events must carry their command-specific state transitions");
+}
+
+void retention_timestamp_gap() {
+    auto session = open(pbx::SimulatorState::Healthy);
+    for (std::uint64_t index = 0; index < 4093; ++index) {
+        pbx::PbxCommand command{pbx::CommandKind::UpdateResource,
+                                "ext-100",
+                                "retention-" + std::to_string(index),
+                                std::nullopt,
+                                {{"state", index % 2 == 0 ? "available" : "away"}}};
+        auto result = session->execute(command, {});
+        require(result.has_value(), "retention setup command must apply");
+    }
+
+    auto gap = session->read_events({0, 1}, {});
+    require(!gap && gap.error().code == pbx::ErrorCode::EventGap,
+            "event retention must report the evicted prefix as a gap");
+    require(gap.error().details.at("first_available_sequence") == "2",
+            "retention gap must identify the first retained sequence");
+
+    auto tail = session->read_events({4095, 10}, {});
+    require(tail && tail.value().items.size() == 2,
+            "retention tail must include sequences 4096 and 4097");
+    const auto epoch = std::chrono::system_clock::time_point{std::chrono::seconds{1'700'000'000}};
+    for (const auto &event : tail.value().items) {
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(event.occurred_at - epoch).count();
+        require(elapsed == static_cast<long long>(event.sequence - 1),
+                "event timestamps must derive from monotonic sequence, not retained size");
+    }
+    require(tail.value().items[0].occurred_at < tail.value().items[1].occurred_at,
+            "retained event timestamps must remain strictly monotonic");
 }
 
 void cancellation() {
@@ -236,7 +380,12 @@ const std::map<std::string, Test> tests = {
     {"healthy_capabilities", healthy_capabilities},
     {"pagination", pagination},
     {"bounded_validation", bounded_validation},
-    {"cumulative_attribute_bound", cumulative_attribute_bound},
+    {"exact_attribute_ceiling", exact_attribute_ceiling},
+    {"embedded_nul_id", embedded_nul_id},
+    {"invalid_resource_kinds", invalid_resource_kinds},
+    {"call_state_commands", call_state_commands},
+    {"queue_state_commands", queue_state_commands},
+    {"retention_timestamp_gap", retention_timestamp_gap},
     {"cancellation", cancellation},
     {"deadline", deadline},
     {"offline", offline},
@@ -257,12 +406,38 @@ const std::map<std::string, Test> tests = {
 
 int main(const int argc, char **argv) {
     if (argc != 2) {
-        std::cerr << "usage: material_phone_pbx_tests <case>\n";
+        std::cerr << "usage: material_phone_pbx_tests <case>|--list|--all\n";
         return 2;
     }
-    const auto found = tests.find(argv[1]);
+    const std::string selection = argv[1];
+    if (selection == "--list") {
+        for (const auto &[name, test] : tests) {
+            (void)test;
+            std::cout << name << '\n';
+        }
+        return tests.empty() ? 1 : 0;
+    }
+    if (selection == "--all") {
+        std::size_t passed = 0;
+        for (const auto &[name, test] : tests) {
+            try {
+                test();
+                ++passed;
+                std::cout << "PASS " << name << '\n';
+            } catch (const std::exception &exception) {
+                std::cerr << "FAIL " << name << ": " << exception.what() << '\n';
+            }
+        }
+        if (passed != tests.size()) {
+            std::cerr << "FAIL_ALL " << passed << '/' << tests.size() << '\n';
+            return 1;
+        }
+        std::cout << "PASS_ALL " << passed << '/' << tests.size() << '\n';
+        return 0;
+    }
+    const auto found = tests.find(selection);
     if (found == tests.end()) {
-        std::cerr << "unknown test case: " << argv[1] << '\n';
+        std::cerr << "unknown test case: " << selection << '\n';
         return 2;
     }
     try {
