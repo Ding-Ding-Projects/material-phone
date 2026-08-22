@@ -20,7 +20,7 @@ AbstractWindow {
         initialHeight = height
     }
 
-	color: DefaultStyle.grey_0
+	color: MaterialTheme.surface
     minimumWidth: Utils.getSizeWithScreenRatio(1020)
     minimumHeight: Utils.getSizeWithScreenRatio(700)
 
@@ -199,7 +199,11 @@ AbstractWindow {
 	Component {
 		id: splashScreen
 		Rectangle {
-			color: DefaultStyle.grey_0
+			color: MaterialTheme.surface
+			gradient: Gradient {
+				GradientStop { position: 0.0; color: MaterialTheme.surface }
+				GradientStop { position: 1.0; color: MaterialTheme.surfaceContainerLow }
+			}
 			Image {
 				anchors.centerIn: parent
 				source: AppIcons.splashscreenLogo
@@ -222,7 +226,7 @@ AbstractWindow {
 	Component {
 		id: ssoPage
 		Rectangle {
-			color: DefaultStyle.grey_0
+			color: MaterialTheme.surface
 			Image {
 				id: logoImage
 				anchors.centerIn: parent

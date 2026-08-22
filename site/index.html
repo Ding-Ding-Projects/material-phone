@@ -20,8 +20,8 @@
   <div class="app-shell">
     <aside class="rail" id="rail" aria-label="Documentation tabs" aria-hidden="false">
       <div class="brand-row">
-        <div class="brand-mark" aria-hidden="true">MP</div>
-        <div><strong>Material Phone</strong><span>Documentation</span></div>
+        <div class="brand-mark" aria-hidden="true"><span>MP</span></div>
+        <div><strong>Material Phone</strong><span>Calling, considered.</span></div>
       </div>
       <button class="icon-button mobile-only" id="close-nav" aria-label="Close navigation">×</button>
       <nav class="tabs" role="tablist" aria-orientation="vertical">
@@ -39,28 +39,45 @@
       <header class="top-bar">
         <button class="icon-button mobile-only" id="open-nav" aria-label="Open navigation" aria-controls="rail" aria-expanded="false">☰</button>
         <div><strong id="page-title">Home</strong><span id="page-subtitle">Product overview and boundaries</span></div>
-        <span class="status-chip" data-state="documented">Documentation preview</span>
+        <span class="status-chip top-status" data-state="documented"><span aria-hidden="true"></span>Foundation preview</span>
       </header>
 
       <main id="main" tabindex="-1">
         <section id="home-panel" class="tab-panel active" role="tabpanel" aria-labelledby="home-tab" data-page="home">
           <div class="hero">
-            <div>
-              <p class="eyebrow">Windows desktop calling, redesigned</p>
-              <h1>Material Phone puts the call in reach.</h1>
+            <div class="hero-copy">
+              <p class="eyebrow"><span aria-hidden="true"></span>Windows desktop calling, redesigned</p>
+              <h1>Every conversation,<br><em>beautifully in reach.</em></h1>
               <p class="lede" data-copy="boundary">This website is a documentation, download, status, settings, and link surface. It is not the calling runtime and does not place or receive calls.</p>
               <div class="button-row">
                 <button class="filled-button" data-go="docs">Read the documentation</button>
                 <button class="tonal-button" data-go="download">Check download status</button>
               </div>
+              <div class="trust-row" aria-label="Product principles">
+                <span><i aria-hidden="true">✓</i> Local-first settings</span>
+                <span><i aria-hidden="true">✓</i> Evidence-led releases</span>
+                <span><i aria-hidden="true">✓</i> Accessible by design</span>
+              </div>
             </div>
-            <div class="phone-card" aria-label="Static product capability preview">
-              <span class="preview-label">Static capability preview</span>
-              <div class="avatar" aria-hidden="true">A</div>
-              <h2>Alex Morgan</h2>
-              <p>Secure SIP contact</p>
-              <div class="call-actions" aria-hidden="true"><span>Mic</span><span>Video</span><span>End</span></div>
-              <p class="preview-note">Illustration only. Controls are intentionally non-interactive.</p>
+            <div class="product-stage">
+              <div class="stage-orbit orbit-one" aria-hidden="true"></div>
+              <div class="stage-orbit orbit-two" aria-hidden="true"></div>
+              <div class="phone-card" aria-label="Static product capability preview">
+                <div class="preview-topline"><span class="preview-label">Static product preview</span><span class="signal-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+                <div class="call-state"><span aria-hidden="true"></span>Connected · 08:42</div>
+                <div class="avatar" aria-hidden="true"><span>A</span></div>
+                <h2>Alex Morgan</h2>
+                <p>Encrypted SIP call</p>
+                <div class="audio-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="call-actions" aria-hidden="true">
+                  <span><i>⌁</i><small>Mute</small></span>
+                  <span><i>◇</i><small>Video</small></span>
+                  <span class="end-call"><i>⌕</i><small>End</small></span>
+                </div>
+                <p class="preview-note">Illustration only — controls are intentionally non-interactive.</p>
+              </div>
+              <div class="floating-chip chip-secure" aria-hidden="true"><span>✓</span><strong>Private by default</strong></div>
+              <div class="floating-chip chip-quality" aria-hidden="true"><span>◈</span><strong>Adaptive clarity</strong></div>
             </div>
           </div>
           <div class="metric-grid" aria-label="Documentation summary">

@@ -17,6 +17,7 @@
 - [x] Complete narrow-drawer semantics, Escape handling, focus entry, and focus return.
 - [x] Validate stored preferences and report refused storage reads, writes, and resets honestly.
 - [x] Remove private vocabulary values and digests from committed public tests and source.
+- [ ] Verify the polished responsive visual treatment in the built website through the approved hidden interaction route; implementation is committed, but capture was intentionally skipped in the ultra-speed pass.
 - [ ] Capture the built website at phone, tablet, and desktop widths through the approved hidden interaction route.
 - [ ] Publish the website and verify served Open Graph tags and image bytes anonymously.
 
@@ -27,6 +28,7 @@
 - [x] Add a transport-neutral C++17 PBX provider interface and simulator.
 - [x] Wire the PBX provider target into the production CMake graph.
 - [x] Verify the standalone PBX contract through 18 native tests.
+- [ ] Verify the cohesive expressive desktop shell and selected-navigation states in the real packaged application; implementation is committed, but capture was intentionally skipped in the ultra-speed pass.
 - [ ] Connect the adaptive shell to the existing calling, contacts, messaging, meetings, and account models.
 - [ ] Add the separately versioned Asterisk adapter behind the provider interface.
 - [ ] Build and interact with the real packaged desktop application through the approved hidden route.

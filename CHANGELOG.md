@@ -20,6 +20,9 @@ All notable changes to this project will be documented in this file.
 
 - Registered the PBX provider in the production CMake graph.
 - Removed the inaccessible private feature-specification gitlink from the public source tree.
+- Refined the website and desktop shell into one cohesive warm-copper Material Design 3 visual language with expressive hierarchy, premium surface treatment, clearer status composition, and complete hover, focus, pressed, and reduced-motion-safe states.
+- Reworked the website hero into an editorial product introduction with an explicitly static, non-interactive call preview and responsive evidence-led supporting content.
+- Upgraded the adaptive desktop navigation to use existing application icons, selected destination pills, calmer density, elevated content framing, and expressive typography without changing the existing calling-model bridges.
 
 ### Security
 

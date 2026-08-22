@@ -11,6 +11,7 @@ Item {
     property real borderWidth: 0
     property real radius: MaterialTokens.shapeLarge
     property int elevation: MaterialTokens.elevationLevel0
+    property bool tintWithElevation: true
 
     implicitWidth: content.childrenRect.width
     implicitHeight: content.childrenRect.height
@@ -30,14 +31,26 @@ Item {
     Rectangle {
         id: surface
         anchors.fill: parent
-        color: root.containerColor
+        color: root.tintWithElevation && root.elevation > 0
+            ? MaterialTheme.elevatedSurface(root.elevation)
+            : root.containerColor
         radius: root.radius
         border.color: root.borderColor
         border.width: root.borderWidth
 
         Item {
             id: content
+            z: 1
             anchors.fill: parent
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: root.tintWithElevation && root.elevation > 0
+                ? MaterialTheme.stateLayer(MaterialTheme.surfaceTint, Math.min(0.11, 0.025 + root.elevation * 0.012))
+                : "transparent"
+            visible: root.tintWithElevation && root.elevation > 0
         }
     }
 }

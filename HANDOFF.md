@@ -23,6 +23,9 @@ The local `main` branch contains the independent upstream snapshot plus the firs
 - Pages staging that combines website and documentation, validates artifact contents, and uses immutable action SHAs.
 - Narrow-drawer inert/hidden state, Escape handling, focus entry/return, stable tab IDs, and exact panel labels.
 - Allowlisted/range-checked stored preferences with non-blocking read/write/reset refusal states.
+- Cohesive warm-copper Material Design 3 visual language across the website and adaptive desktop shell, including expressive type, shaped surfaces, purposeful elevation, refined density, and complete interaction-state styling.
+- Editorial website hero with an explicitly static call preview, product-principle indicators, responsive composition, and reduced-motion-safe ambient motion.
+- Adaptive desktop navigation using the existing application icon sources, selected destination pills, elevated content framing, and preserved destination/model bridge wiring.
 
 ### Evidence boundary
 
@@ -32,6 +35,7 @@ The local `main` branch contains the independent upstream snapshot plus the firs
 - The delivery contract passes its positive checks and deliberate signing/private-input regressions.
 - Both workflow files pass structural actionlint validation with shellcheck integration disabled on Windows.
 - No browser capture or built desktop interaction is claimed.
+- The visual-quality ultra-speed pass intentionally ran no tests, lint, accessibility automation, reviews, audits, or captures. Its changes require built-artifact verification before the corresponding roadmap items can be checked.
 - Status Hub publishing was unavailable in this session.
 - The feature inventory therefore keeps Status Hub `planned`; local cards are not presented as Hub implementation.
 - No verified Material Phone installer or immutable release manifest exists, so the download action remains disabled.

@@ -20,11 +20,15 @@ Item {
         var destinations = [
             {
                 "destinationIndex": 0,
+                "icon": AppIcons.phone,
+                "selectedIcon": AppIcons.phoneSelected,
                 "label": qsTr("bottom_navigation_calls_label"),
                 "description": qsTr("open_calls_page_accessible_name")
             },
             {
                 "destinationIndex": 1,
+                "icon": AppIcons.adressBook,
+                "selectedIcon": AppIcons.adressBookSelected,
                 "label": qsTr("bottom_navigation_contacts_label"),
                 "description": qsTr("open_contacts_page_accessible_name")
             }
@@ -32,6 +36,8 @@ Item {
         if (!SettingsCpp.disableChatFeature) {
             destinations.push({
                 "destinationIndex": 2,
+                "icon": AppIcons.chatTeardropText,
+                "selectedIcon": AppIcons.chatTeardropTextSelected,
                 "label": qsTr("bottom_navigation_conversations_label"),
                 "description": qsTr("open_conversations_page_accessible_name")
             });
@@ -39,6 +45,8 @@ Item {
         if (!SettingsCpp.disableMeetingsFeature) {
             destinations.push({
                 "destinationIndex": 3,
+                "icon": AppIcons.videoconference,
+                "selectedIcon": AppIcons.videoconferenceSelected,
                 "label": qsTr("bottom_navigation_meetings_label"),
                 "description": qsTr("open_contact_page_accessible_name")
             });

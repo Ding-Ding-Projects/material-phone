@@ -4,7 +4,7 @@ import Linphone
 Item {
     id: root
 
-    default property alias contentData: contentHost.data
+    default property alias contentData: contentHost.contentData
     property var navigationModel: []
     property int currentIndex: 0
     property bool compact: width < MaterialTokens.compactBreakpoint
@@ -14,6 +14,23 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: MaterialTheme.surface
+
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: MaterialTheme.surface }
+            GradientStop { position: 1.0; color: MaterialTheme.surfaceContainerLow }
+        }
+    }
+
+    Rectangle {
+        width: Math.min(parent.width * 0.46, 620)
+        height: width
+        radius: width / 2
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: -width * 0.24
+        anchors.topMargin: -height * 0.42
+        color: MaterialTheme.stateLayer(MaterialTheme.primary, MaterialTheme.darkMode ? 0.08 : 0.055)
+        visible: !root.compact
     }
 
     MaterialNavigationBar {
@@ -37,14 +54,21 @@ Item {
         anchors.top: parent.top
         anchors.bottom: root.compact ? navigation.top : parent.bottom
 
-        Item {
+        MaterialSurface {
             id: contentHost
             anchors.top: parent.top
             anchors.bottom: parent.bottom
+            anchors.topMargin: root.compact ? 0 : MaterialTokens.contentInsetExpanded
+            anchors.bottomMargin: root.compact ? 0 : MaterialTokens.contentInsetExpanded
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, root.compact
-                ? MaterialTokens.phoneContentMax
+            width: Math.min(parent.width - (root.compact ? 0 : MaterialTokens.contentInsetExpanded * 2), root.compact
+                ? parent.width
                 : MaterialTokens.expandedContentMax)
+            radius: root.compact ? MaterialTokens.shapeNone : MaterialTokens.shapeExtraLarge
+            containerColor: root.compact ? MaterialTheme.surface : MaterialTheme.surfaceContainerLowest
+            borderColor: root.compact ? "transparent" : MaterialTheme.outlineVariant
+            borderWidth: root.compact ? 0 : 1
+            elevation: root.compact ? MaterialTokens.elevationLevel0 : MaterialTokens.elevationLevel1
 
             Behavior on width {
                 NumberAnimation {
