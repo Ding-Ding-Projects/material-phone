@@ -73,6 +73,22 @@ function Get-FallbackInstallRoot($Tool, [string]$BaseRoot) {
     return Join-Path $BaseRoot "bootstrap\$safeId\$($Tool.version)"
 }
 
+function Get-Sha256([string]$Path) {
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            return ([BitConverter]::ToString($sha256.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+        }
+        finally {
+            $sha256.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function Resolve-FallbackTool($Tool, [string]$BaseRoot) {
     if (-not $Tool.fallback) { return $null }
     $installRoot = Get-FallbackInstallRoot $Tool $BaseRoot
@@ -107,7 +123,7 @@ function Get-CanonicalDownload($Fallback, [string]$DownloadRoot) {
     if ([string]::IsNullOrWhiteSpace($leaf)) { throw "Portable fallback URL has no artifact filename: $uri" }
     $destination = Join-Path $DownloadRoot "$expectedHash-$leaf"
     if (Test-Path -LiteralPath $destination -PathType Leaf) {
-        $cachedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()
+        $cachedHash = Get-Sha256 $destination
         if ($cachedHash -eq $expectedHash) { return $destination }
         Remove-Item -LiteralPath $destination -Force
     }
@@ -118,7 +134,7 @@ function Get-CanonicalDownload($Fallback, [string]$DownloadRoot) {
         if ($finalUri -and ($finalUri.Scheme -ne 'https' -or $allowedHosts -notcontains $finalUri.Host.ToLowerInvariant())) {
             throw "Portable fallback redirected outside the canonical host allowlist: $finalUri"
         }
-        $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $temporary).Hash.ToLowerInvariant()
+        $actualHash = Get-Sha256 $temporary
         if ($actualHash -ne $expectedHash) { throw "Portable fallback digest mismatch for $uri. Expected $expectedHash; received $actualHash." }
         Move-Item -LiteralPath $temporary -Destination $destination
     }

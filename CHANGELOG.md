@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Made fallback artifact hashing independent of the optional `Get-FileHash` command by using the built-in .NET SHA-256 implementation directly.
 - Added separately pinned canonical fallback artifacts for the Windows build toolchain when Windows Package Manager is missing or cannot complete a non-interactive install; catalog digest mismatches still fail closed.
 - Made generated-output freshness fail before the generator writes, with a deliberate stale-output red/green regression.
 - Staged website and documentation under one Pages artifact and added artifact-level existence and link checks.
