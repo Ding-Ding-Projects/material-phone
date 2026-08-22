@@ -15,6 +15,7 @@
 - [x] Stage the website and documentation together and validate required artifact files before Pages upload.
 - [x] Pin every Pages action to a reviewed immutable commit SHA with its version tag retained in a comment.
 - [x] Complete narrow-drawer semantics, Escape handling, focus entry, and focus return.
+- [x] Add outside dismissal, background focus isolation, iPhone safe-area spacing, and consistent mobile touch targets to the narrow drawer and page chrome.
 - [x] Validate stored preferences and report refused storage reads, writes, and resets honestly.
 - [x] Remove private vocabulary values and digests from committed public tests and source.
 - [ ] Verify the polished responsive visual treatment in the built website through the approved hidden interaction route; implementation is committed, but capture was intentionally skipped in the ultra-speed pass.

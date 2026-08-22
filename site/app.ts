@@ -146,17 +146,25 @@
   function setDrawer(open, returnFocus = false) {
     const rail = $("#rail");
     const opener = $("#open-nav");
+    const scrim = $("#nav-scrim");
+    const content = $(".content-shell");
     if (!mobileNavigation.matches) {
       rail.classList.remove("open");
       rail.removeAttribute("inert");
       rail.setAttribute("aria-hidden", "false");
       opener.setAttribute("aria-expanded", "false");
+      scrim.hidden = true;
+      scrim.setAttribute("aria-hidden", "true");
+      content.removeAttribute("inert");
       return;
     }
     rail.classList.toggle("open", open);
     rail.toggleAttribute("inert", !open);
     rail.setAttribute("aria-hidden", String(!open));
     opener.setAttribute("aria-expanded", String(open));
+    scrim.hidden = !open;
+    scrim.setAttribute("aria-hidden", String(!open));
+    content.toggleAttribute("inert", open);
     if (open) $("#close-nav").focus();
     else if (returnFocus) opener.focus();
   }
@@ -305,6 +313,7 @@
   $$('[data-go]').forEach((button) => button.addEventListener("click", () => activatePage(button.dataset.go)));
   $("#open-nav").addEventListener("click", () => setDrawer(true));
   $("#close-nav").addEventListener("click", () => setDrawer(false, true));
+  $("#nav-scrim").addEventListener("click", () => setDrawer(false, true));
   mobileNavigation.addEventListener?.("change", () => setDrawer(false, false));
   ["feature-search", "surface-filter", "status-filter"].forEach((id) => document.getElementById(id).addEventListener("input", renderFeatureInventory));
   $("#theme-setting").addEventListener("change", (event) => { preferences.theme = event.target.value; applyPreferences(); savePreferences(); });

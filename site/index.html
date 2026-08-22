@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6750a4">
   <meta name="description" content="Material Phone documentation, download status, feature inventory, and local site settings.">
   <meta property="og:title" content="Material Phone documentation">
@@ -18,7 +18,7 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="app-shell">
-    <aside class="rail" id="rail" aria-label="Documentation tabs" aria-hidden="false">
+    <aside class="rail" id="rail" aria-label="Documentation tabs" aria-hidden="true" inert>
       <div class="brand-row">
         <div class="brand-mark" aria-hidden="true"><span>MP</span></div>
         <div><strong>Material Phone</strong><span>Calling, considered.</span></div>
@@ -34,6 +34,8 @@
       </nav>
       <button class="tonal-button palette-launch" id="palette-launch" aria-keyshortcuts="Control+Shift+F">Command palette <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></button>
     </aside>
+
+    <button class="drawer-scrim" id="nav-scrim" type="button" aria-label="Close navigation" aria-hidden="true" hidden></button>
 
     <div class="content-shell">
       <header class="top-bar">

@@ -1,4 +1,4 @@
-// Generated file. Do not edit directly.
+// Generated from data/feature-inventory.json by build-site.mjs. Do not edit directly.
 window.MATERIAL_PHONE_FEATURES = [
   {
     "id": "language-modes",
