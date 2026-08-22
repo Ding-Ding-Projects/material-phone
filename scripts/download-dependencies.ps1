@@ -254,12 +254,27 @@ function Install-FallbackTool($Tool, [string]$BaseRoot) {
                 }
             }
             'tar' {
-                $extractRoot = "$installRoot.extract-$PID"
                 $extractTimeoutSeconds = if ($fallback.extractTimeoutSeconds) { [int]$fallback.extractTimeoutSeconds } else { 300 }
                 $heartbeatSeconds = if ($fallback.heartbeatSeconds) { [int]$fallback.heartbeatSeconds } else { 15 }
                 if ($extractTimeoutSeconds -le 0 -or $heartbeatSeconds -le 0) { throw "Portable fallback extraction bounds are invalid for $($Tool.id)." }
                 $windowsTar = Join-Path $env:WINDIR 'System32\tar.exe'
                 if (-not (Test-Path -LiteralPath $windowsTar -PathType Leaf)) { throw "Bounded archive extraction requires Windows tar.exe at $windowsTar." }
+                $extractParent = Split-Path -Parent $installRoot
+                if ($env:RUNNER_TEMP) {
+                    $runnerTemp = [IO.Path]::GetFullPath([string]$env:RUNNER_TEMP)
+                    $installVolume = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($installRoot))
+                    $runnerTempVolume = [IO.Path]::GetPathRoot($runnerTemp)
+                    if ((Test-Path -LiteralPath $runnerTemp -PathType Container) -and $runnerTempVolume.Equals($installVolume, [StringComparison]::OrdinalIgnoreCase)) {
+                        $extractParent = $runnerTemp
+                        Write-Phase "Using same-volume runner temporary storage for $($Tool.id) extraction: $extractParent"
+                    }
+                    else {
+                        Write-Phase "Runner temporary storage is unavailable or cross-volume; extracting $($Tool.id) beside its final tool root."
+                    }
+                }
+                $safeId = ([string]$Tool.id) -replace '[^A-Za-z0-9._-]', '_'
+                $extractRoot = Join-Path $extractParent "$safeId-$($Tool.version)-extract-$PID"
+                if (Test-Path -LiteralPath $extractRoot) { throw "Portable fallback extraction directory already exists: $extractRoot" }
                 $process = $null
                 try {
                     New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null

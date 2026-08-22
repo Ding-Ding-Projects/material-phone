@@ -85,7 +85,7 @@
         "maxDownloadBytes": 60000000,
         "downloadTimeoutSeconds": 1800,
         "heartbeatSeconds": 15,
-        "extractTimeoutSeconds": 300,
+        "extractTimeoutSeconds": 1200,
         "stagingTimeoutSeconds": 60,
         "stripSingleDirectory": true,
         "commandRelativePath": "usr/bin/pacman.exe",
