@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(material_phone_pbx LANGUAGES CXX)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    project(material_phone_pbx LANGUAGES CXX)
+endif()
 
 add_library(material_phone_pbx STATIC
     src/pbx_provider.cpp

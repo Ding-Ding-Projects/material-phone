@@ -23,13 +23,15 @@
 cmake_minimum_required(VERSION 3.22)
 
 # This public build must never acquire the private feature-specification checkout
-# as a configured submodule or build input. The historical gitlink is deliberately
-# left untouched so source provenance remains auditable.
+# as a configured submodule or build input.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gitmodules")
 	file(READ "${CMAKE_CURRENT_SOURCE_DIR}/.gitmodules" MATERIAL_PHONE_GITMODULES)
 	if(MATERIAL_PHONE_GITMODULES MATCHES "(^|[\r\n])[ \t]*path[ \t]*=[ \t]*external/feature-specs([\r\n]|$)")
 		message(FATAL_ERROR "external/feature-specs is private and must not be registered in the public build")
 	endif()
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/feature-specs")
+	message(FATAL_ERROR "external/feature-specs is private and must not exist in the public build")
 endif()
 
 
@@ -190,6 +192,7 @@ add_option(OPTION_LIST ENABLE_UPDATE_CHECK "Enable update check." ON)
 add_option(OPTION_LIST ENABLE_VIDEO "Enable Video support." YES)
 add_option(OPTION_LIST ENABLE_WINDOWS_TOOLS_CHECK "Enable tools checks on Windows for auto install." OFF)
 add_option(OPTION_LIST ENABLE_CRASH_HANDLER "Enable Crash Handler" YES)
+add_option(OPTION_LIST ENABLE_MATERIAL_PHONE_PBX_PROVIDER "Build the transport-neutral Material Phone PBX provider contract" ON)
 
 add_cache(OPTION_LIST LINPHONE_SDK_MAKE_RELEASE_FILE_URL "Make a RELEASE file that work along check_version and use this URL" "")
 
@@ -269,6 +272,9 @@ if(NOT APPLE OR MONO_ARCH)
 			add_subdirectory("Linphone")
 	endfunction()
 	add_linphone_app()
+	if(ENABLE_MATERIAL_PHONE_PBX_PROVIDER)
+		add_subdirectory("Linphone/pbx")
+	endif()
 	if(ENABLE_BUILD_APP_PLUGINS)
 			#add_subdirectory("plugins" "plugins-app")
 	endif()

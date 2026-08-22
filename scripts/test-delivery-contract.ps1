@@ -29,6 +29,8 @@ function Assert-DeliveryContract([string]$ContractRoot, [bool]$CheckGitlink) {
     }
     $cmake = Get-Content -Raw -LiteralPath $cmakePath
     Assert-Contains $cmake 'external/feature-specs is private and must not be registered in the public build' 'The CMake private-input guard is missing.'
+    Assert-Contains $cmake 'external/feature-specs is private and must not exist in the public build' 'The CMake private-path guard is missing.'
+    Assert-Contains $cmake 'add_subdirectory("Linphone/pbx")' 'The PBX provider is not registered in the production build graph.'
 
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     if ($manifest.schemaVersion -ne 1 -or $manifest.platform -ne 'windows-x64') { throw 'The dependency manifest schema/platform contract is invalid.' }
@@ -75,9 +77,10 @@ function Assert-DeliveryContract([string]$ContractRoot, [bool]$CheckGitlink) {
     }
 
     if ($CheckGitlink) {
-        $gitlink = (& git -C $ContractRoot ls-files -s -- external/feature-specs).Trim()
-        if ($gitlink -notmatch '^160000 [0-9a-f]{40} 0\s+external/feature-specs$') {
-            throw 'The historical external/feature-specs gitlink was removed or modified.'
+        $gitlinkOutput = @(& git -C $ContractRoot ls-files -s -- external/feature-specs)
+        $gitlink = ($gitlinkOutput -join "`n").Trim()
+        if (-not [string]::IsNullOrWhiteSpace($gitlink)) {
+            throw 'The private external/feature-specs gitlink is tracked in the public repository.'
         }
     }
 }

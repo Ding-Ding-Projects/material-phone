@@ -111,6 +111,11 @@ test("site assets are local and analytics-free", () => {
   assert.doesNotMatch(appSource, /\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/);
 });
 
+test("deployed metadata identifies the canonical documentation URL", () => {
+  assert.match(html, /property="og:url" content="https:\/\/ding-ding-projects\.github\.io\/material-phone\/"/);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+});
+
 test("categorized feature articles have required sections and valid suggested links", () => {
   const articles = [
     "docs/site/architecture.md", "docs/site/navigation.md", "docs/site/settings.md", "docs/site/regex-builder.md",
