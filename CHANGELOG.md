@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Forced keyring setup through the validated bundled MSYS2 `bash.exe`, preventing the Windows WSL launcher from intercepting `pacman-key` through its environment-based shebang.
 - Initialized the package keyring from bundled official MSYS2 material, corrected the Graphviz mapping for the `mingw64` toolchain, and continued runtime upgrades in a fresh non-interactive package-manager process before dependency installation.
 - Made fallback artifact hashing independent of the optional `Get-FileHash` command by using the built-in .NET SHA-256 implementation directly.
 - Added separately pinned canonical fallback artifacts for the Windows build toolchain when Windows Package Manager is missing or cannot complete a non-interactive install; catalog digest mismatches still fail closed.
