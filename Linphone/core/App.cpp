@@ -97,6 +97,9 @@
 #include "core/videoSource/VideoSourceDescriptorGui.hpp"
 #include "model/friend/FriendsManager.hpp"
 #include "model/object/VariantObject.hpp"
+#ifdef HAVE_MATERIAL_PHONE_PBX_PROVIDER
+#include "model/pbx/PbxService.hpp"
+#endif
 #include "model/tool/ToolModel.hpp"
 #include "tool/Constants.hpp"
 #include "tool/EnumsToString.hpp"
@@ -989,6 +992,11 @@ void App::initLocale() {
 }
 
 void App::initCppInterfaces() {
+#ifdef HAVE_MATERIAL_PHONE_PBX_PROVIDER
+	qmlRegisterSingletonType<PbxService>(
+	    Constants::MainQmlUri, 1, 0, "PbxService",
+	    [](QQmlEngine *engine, QJSEngine *) -> QObject * { return new PbxService(engine); });
+#endif
 	qmlRegisterSingletonType<App>(Constants::MainQmlUri, 1, 0, "AppCpp",
 	                              [](QQmlEngine *engine, QJSEngine *) -> QObject * { return App::getInstance(); });
 	qmlRegisterSingletonType<LoginPage>(

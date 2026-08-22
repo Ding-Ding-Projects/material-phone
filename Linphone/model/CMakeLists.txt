@@ -58,4 +58,11 @@ list(APPEND _LINPHONEAPP_SOURCES
 
 )
 
+if(TARGET material_phone_pbx)
+	list(APPEND _LINPHONEAPP_SOURCES
+		model/pbx/PbxService.cpp
+		model/pbx/PbxService.hpp
+	)
+endif()
+
 set(_LINPHONEAPP_SOURCES ${_LINPHONEAPP_SOURCES} PARENT_SCOPE)

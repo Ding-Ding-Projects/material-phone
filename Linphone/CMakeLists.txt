@@ -250,6 +250,11 @@ foreach(T ${QT_PACKAGES})
 	target_link_libraries(${TARGET_NAME} PRIVATE Qt6::${T})
 endforeach()
 
+if(TARGET material_phone_pbx)
+	target_link_libraries(${TARGET_NAME} PRIVATE material_phone_pbx)
+	target_compile_definitions(${TARGET_NAME} PRIVATE HAVE_MATERIAL_PHONE_PBX_PROVIDER=1)
+endif()
+
 if (WIN32)
 	target_link_libraries(${TARGET_NAME} PRIVATE runtimeobject)
 	target_link_libraries(${TARGET_NAME} PRIVATE shlwapi propsys shell32)
