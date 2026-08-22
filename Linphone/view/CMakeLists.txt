@@ -106,6 +106,12 @@ list(APPEND _LINPHONEAPP_QML_FILES
 	view/Control/Input/TextField.qml
 	view/Control/Input/TimeComboBox.qml
 
+	view/Control/Material/MaterialButton.qml
+	view/Control/Material/MaterialIconButton.qml
+	view/Control/Material/MaterialNavigationBar.qml
+	view/Control/Material/MaterialSurface.qml
+	view/Control/Material/MaterialTextField.qml
+
 	view/Control/Popup/DesktopPopup.qml
 	view/Control/Popup/InformationPopup.qml
 	view/Control/Popup/NumericPadPopup.qml
@@ -148,6 +154,7 @@ list(APPEND _LINPHONEAPP_QML_FILES
 
 	view/Page/Layout/Login/LoginLayout.qml
 	view/Page/Layout/Main/MainLayout.qml
+	view/Page/Layout/Main/AdaptivePhoneShell.qml
 	view/Page/Layout/Settings/AbstractSettingsLayout.qml
 	view/Page/Layout/Settings/AccountSettingsGeneralLayout.qml
 	view/Page/Layout/Settings/AccountSettingsParametersLayout.qml
@@ -192,6 +199,7 @@ list(APPEND _LINPHONEAPP_QML_FILES
 
 	view/Test/ItemsTest.qml
 	view/Test/RectangleTest.qml
+	view/Test/MaterialFoundationTest.qml
 )
 
 list(APPEND _LINPHONEAPP_QML_SINGLETONS
@@ -201,6 +209,9 @@ list(APPEND _LINPHONEAPP_QML_SINGLETONS
 	view/Style/FileViewStyle.qml
 	view/Style/Typography.qml
 	view/Style/Themes.qml
+	view/Style/MaterialTheme.qml
+	view/Style/MaterialTokens.qml
+	view/Style/MaterialType.qml
 )
 
 set(_LINPHONEAPP_QML_FILES ${_LINPHONEAPP_QML_FILES} PARENT_SCOPE)
