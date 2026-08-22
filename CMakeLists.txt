@@ -22,6 +22,16 @@
 
 cmake_minimum_required(VERSION 3.22)
 
+# This public build must never acquire the private feature-specification checkout
+# as a configured submodule or build input. The historical gitlink is deliberately
+# left untouched so source provenance remains auditable.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gitmodules")
+	file(READ "${CMAKE_CURRENT_SOURCE_DIR}/.gitmodules" MATERIAL_PHONE_GITMODULES)
+	if(MATERIAL_PHONE_GITMODULES MATCHES "(^|[\r\n])[ \t]*path[ \t]*=[ \t]*external/feature-specs([\r\n]|$)")
+		message(FATAL_ERROR "external/feature-specs is private and must not be registered in the public build")
+	endif()
+endif()
+
 
 get_cmake_property(vars CACHE_VARIABLES)
 foreach(var ${vars})
