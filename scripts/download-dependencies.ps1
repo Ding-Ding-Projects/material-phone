@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [switch]$Silent
+    [switch]$Silent,
+    [switch]$ValidateQtCacheOnly,
+    [string]$QtRootOverride
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,17 +15,41 @@ function Write-Phase([string]$Message) {
     Write-Host "[dependencies] $Message"
 }
 
-$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin -and -not $Silent) {
-    Write-Phase 'Requesting elevation before any installation work begins.'
-    $child = Start-Process -FilePath 'powershell.exe' -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList @(
-        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath
-    )
-    exit $child.ExitCode
+function Get-QtInstallRoot($Manifest, [string]$BaseRoot) {
+    return Join-Path $BaseRoot "$($Manifest.qt.version)\$($Manifest.qt.installDirectory)"
 }
-if (-not $isAdmin -and $Silent) {
-    Write-Phase 'Silent mode is not elevated; continuing with user-scoped locations and refusing interactive prompts.'
+
+function Get-MissingQtProofs($Manifest, [string]$InstallRoot) {
+    $missing = New-Object System.Collections.Generic.List[string]
+    $baseProof = Join-Path $InstallRoot 'lib\cmake\Qt6\Qt6Config.cmake'
+    if (-not (Test-Path -LiteralPath $baseProof -PathType Leaf)) { $missing.Add('base:Qt6Config.cmake') }
+    foreach ($module in @($Manifest.qt.modules)) {
+        $proofProperty = $Manifest.qt.moduleProofs.PSObject.Properties[[string]$module]
+        if (-not $proofProperty -or [string]::IsNullOrWhiteSpace([string]$proofProperty.Value)) {
+            $missing.Add("manifest:$module")
+            continue
+        }
+        $proofPath = Join-Path $InstallRoot ([string]$proofProperty.Value).Replace('/', '\')
+        if (-not (Test-Path -LiteralPath $proofPath -PathType Leaf)) { $missing.Add([string]$module) }
+    }
+    return @($missing)
+}
+
+function Get-GitmoduleEntries([string]$Path) {
+    $entries = New-Object System.Collections.Generic.List[object]
+    $current = $null
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        if ($line -match '^\s*\[submodule\s+"([^"]+)"\]\s*$') {
+            if ($current) { $entries.Add([pscustomobject]$current) }
+            $current = [ordered]@{ name = $Matches[1]; path = $null; url = $null }
+            continue
+        }
+        if (-not $current) { continue }
+        if ($line -match '^\s*path\s*=\s*(\S+)\s*$') { $current.path = $Matches[1] }
+        elseif ($line -match '^\s*url\s*=\s*(\S+)\s*$') { $current.url = $Matches[1] }
+    }
+    if ($current) { $entries.Add([pscustomobject]$current) }
+    return $entries.ToArray()
 }
 
 function Resolve-Tool([string]$Command) {
@@ -51,6 +77,41 @@ if ($manifest.schemaVersion -ne 1 -or $manifest.platform -ne 'windows-x64') {
 }
 if ($manifest.signing.allowed -ne $false) {
     throw 'Dependency manifest violates the permanent code-signing prohibition.'
+}
+
+# Validate the complete top-level allowlist before any package or Git network call.
+$gitmodulesPath = Join-Path $repoRoot '.gitmodules'
+$registeredModules = @(Get-GitmoduleEntries $gitmodulesPath)
+if ($registeredModules.Count -ne @($manifest.submodules).Count) { throw 'The .gitmodules entry count differs from the exact public allowlist.' }
+foreach ($expected in @($manifest.submodules)) {
+    $matches = @($registeredModules | Where-Object { $_.name -eq [string]$expected.name -and $_.path -eq [string]$expected.path -and $_.url -eq [string]$expected.url })
+    if ($matches.Count -ne 1) { throw "The .gitmodules entry is not exactly allowlisted: $($expected.name)." }
+}
+foreach ($excluded in @($manifest.excludedGitlinks)) {
+    if (@($registeredModules.path) -contains [string]$excluded) { throw "Excluded private gitlink is registered as a submodule: $excluded" }
+}
+
+$toolRoot = if ($QtRootOverride) { Split-Path -Parent $QtRootOverride } else { Join-Path $repoRoot $manifest.toolRoot }
+$qtRoot = if ($QtRootOverride) { $QtRootOverride } else { Join-Path $toolRoot 'Qt' }
+$qtInstallRoot = Get-QtInstallRoot $manifest $qtRoot
+if ($ValidateQtCacheOnly) {
+    $missingQt = @(Get-MissingQtProofs $manifest $qtInstallRoot)
+    if ($missingQt.Count -ne 0) { throw "Qt cache is incomplete: $($missingQt -join ', ')." }
+    Write-Phase "Qt cache is complete for every declared module at $qtInstallRoot."
+    exit 0
+}
+
+$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin -and -not $Silent) {
+    Write-Phase 'Requesting elevation before any installation work begins.'
+    $child = Start-Process -FilePath 'powershell.exe' -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath
+    )
+    exit $child.ExitCode
+}
+if (-not $isAdmin -and $Silent) {
+    Write-Phase 'Silent mode is not elevated; continuing with user-scoped locations and refusing interactive prompts.'
 }
 
 $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
@@ -95,7 +156,6 @@ $env:Path = "$machinePath;$userPath;$env:Path;C:\msys64\usr\bin;C:\msys64\mingw6
 
 $python = Get-Command py.exe -ErrorAction SilentlyContinue
 if (-not $python) { throw 'Python 3.11 was installed but py.exe is still unavailable after PATH refresh.' }
-$toolRoot = Join-Path $repoRoot $manifest.toolRoot
 $venv = Join-Path $toolRoot 'python'
 $venvPython = Join-Path $venv 'Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $venvPython)) {
@@ -109,11 +169,11 @@ foreach ($package in $manifest.python.packages) {
     if ($LASTEXITCODE -ne 0) { throw "Python package installation failed: $package" }
 }
 
-$qtRoot = Join-Path $toolRoot 'Qt'
 $qtVersion = [string]$manifest.qt.version
 $qtArch = [string]$manifest.qt.architecture
-$qtConfig = Join-Path $qtRoot "$qtVersion\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake"
-if (-not (Test-Path -LiteralPath $qtConfig)) {
+$missingQt = @(Get-MissingQtProofs $manifest $qtInstallRoot)
+if ($missingQt.Count -ne 0) {
+    Write-Phase "Qt cache is missing declared proofs ($($missingQt -join ', ')); repairing the complete declared set."
     Write-Phase "Installing Qt $qtVersion ($qtArch) and declared modules into $qtRoot."
     $qtArguments = @(
         '-m', 'aqt', 'install-qt', [string]$manifest.qt.host,
@@ -123,8 +183,9 @@ if (-not (Test-Path -LiteralPath $qtConfig)) {
     & $venvPython @qtArguments | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Qt $qtVersion installation failed." }
 }
-if (-not (Test-Path -LiteralPath $qtConfig)) {
-    throw "Qt installation completed without the expected configuration file: $qtConfig"
+$missingQt = @(Get-MissingQtProofs $manifest $qtInstallRoot)
+if ($missingQt.Count -ne 0) {
+    throw "Qt installation completed with missing declared proofs: $($missingQt -join ', ')."
 }
 
 $pacman = Resolve-Tool 'pacman'
@@ -136,16 +197,10 @@ if ($LASTEXITCODE -ne 0) { throw "MSYS2 database refresh failed (exit $LASTEXITC
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 package installation failed (exit $LASTEXITCODE)." }
 
 Write-Phase 'Initializing only public, manifest-listed submodules.'
-& git -C $repoRoot submodule sync -- @($manifest.submodules) | Out-Host
+& git -C $repoRoot submodule sync -- @($manifest.submodules.path) | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Public submodule synchronization failed.' }
-& git -C $repoRoot submodule update --init --recursive --jobs 4 -- @($manifest.submodules) | Out-Host
+& git -C $repoRoot submodule update --init --jobs 4 -- @($manifest.submodules.path) | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Public submodule initialization failed.' }
-
-foreach ($excluded in $manifest.excludedGitlinks) {
-    $registered = & git -C $repoRoot config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>$null |
-        Select-String -SimpleMatch ([string]$excluded)
-    if ($registered) { throw "Excluded private gitlink is registered as a submodule: $excluded" }
-}
 
 $elapsed = (Get-Date) - $startedAt
 Write-Phase ("Complete in {0:hh\:mm\:ss}. Tool root: {1}" -f $elapsed, $toolRoot)

@@ -58,11 +58,17 @@
     "host": "windows",
     "target": "desktop",
     "architecture": "win64_msvc2022_64",
+    "installDirectory": "msvc2022_64",
     "modules": [
       "qt5compat",
       "qtmultimedia",
       "qtshadertools"
-    ]
+    ],
+    "moduleProofs": {
+      "qt5compat": "lib/cmake/Qt6Core5Compat/Qt6Core5CompatConfig.cmake",
+      "qtmultimedia": "lib/cmake/Qt6Multimedia/Qt6MultimediaConfig.cmake",
+      "qtshadertools": "lib/cmake/Qt6ShaderTools/Qt6ShaderToolsConfig.cmake"
+    }
   },
   "msys2": {
     "packages": [
@@ -91,14 +97,35 @@
     "integrity": "NuGet repository signature and package hash"
   },
   "submodules": [
-    "external/linphone-sdk",
-    "external/google/gn",
-    "external/google/crashpad",
-    "external/google/chromium-depot-tools"
+    {
+      "name": "linphone-sdk",
+      "path": "external/linphone-sdk",
+      "url": "https://gitlab.linphone.org/BC/public/linphone-sdk.git"
+    },
+    {
+      "name": "external/google/gn",
+      "path": "external/google/gn",
+      "url": "https://gitlab.linphone.org/BC/public/external/gn.git"
+    },
+    {
+      "name": "external/google/crashpad",
+      "path": "external/google/crashpad",
+      "url": "https://gitlab.linphone.org/BC/public/external/crashpad.git"
+    },
+    {
+      "name": "external/google/chromium-depot-tools",
+      "path": "external/google/chromium-depot-tools",
+      "url": "https://gitlab.linphone.org/BC/public/external/chromium-depot-tools.git"
+    }
   ],
   "excludedGitlinks": [
     "external/feature-specs"
   ],
+  "application": {
+    "displayName": "Material Phone",
+    "executableName": "MaterialPhone",
+    "executableRelativePath": "bin/MaterialPhone.exe"
+  },
   "signing": {
     "allowed": false,
     "policy": "Code signing is prohibited. All generated Windows artifacts must remain unsigned."

@@ -1,17 +1,21 @@
 {
   "schemaVersion": 1,
   "packageId": "MaterialPhone",
+  "applicationExecutableRelativePath": "bin/MaterialPhone.exe",
   "requiredArtifacts": [
     "Setup.exe",
     "RELEASES",
-    "*-full.nupkg"
+    "*-full.nupkg",
+    "payload-provenance.json"
   ],
   "optionalArtifacts": [
     "*-delta.nupkg"
   ],
   "signing": {
     "allowed": false,
-    "requiredAuthenticodeStatus": "NotSigned"
+    "requiredAuthenticodeStatus": "NotSigned",
+    "verifyPayloadExecutables": true,
+    "verifyPackageExecutables": true
   },
   "updates": {
     "transport": "https",
