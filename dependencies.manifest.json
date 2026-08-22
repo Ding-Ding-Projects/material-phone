@@ -132,7 +132,7 @@
       "bzip2",
       "doxygen",
       "gawk",
-      "graphviz",
+      "mingw-w64-x86_64-graphviz",
       "intltool",
       "patch",
       "perl",

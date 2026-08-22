@@ -372,9 +372,24 @@ if ($missingQt.Count -ne 0) {
 $pacman = $resolvedTools['pacman']
 if (-not $pacman) { $pacman = Resolve-Tool 'pacman' }
 if (-not $pacman) { throw 'MSYS2 bootstrap completed but pacman.exe is unavailable.' }
+$msysUsrBin = Split-Path -Parent $pacman
+$msysRoot = Split-Path -Parent (Split-Path -Parent $msysUsrBin)
+$msysBash = Join-Path $msysUsrBin 'bash.exe'
+$keyringRoot = Join-Path $msysRoot 'usr\share\pacman\keyrings'
+foreach ($keyringFile in @('msys2.gpg', 'msys2-trusted', 'msys2-revoked')) {
+    $keyringPath = Join-Path $keyringRoot $keyringFile
+    if (-not (Test-Path -LiteralPath $keyringPath -PathType Leaf)) { throw "Bundled official MSYS2 keyring material is missing: $keyringPath" }
+}
+if (-not (Test-Path -LiteralPath $msysBash -PathType Leaf)) { throw "MSYS2 bash.exe is unavailable for keyring initialization: $msysBash" }
+Write-Phase 'Initializing and populating the package keyring from bundled official MSYS2 material.'
+& $msysBash -c '/usr/bin/pacman-key --init && /usr/bin/pacman-key --populate msys2' | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "MSYS2 keyring initialization failed (exit $LASTEXITCODE)." }
 Write-Phase 'Refreshing the MSYS2 package database and installing the pinned manifest package set.'
 & $pacman -Syu --noconfirm | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 database refresh failed (exit $LASTEXITCODE)." }
+Write-Phase 'Continuing the MSYS2 runtime upgrade in a fresh pacman process before package installation.'
+& $pacman -Su --noconfirm | Out-Host
+if ($LASTEXITCODE -ne 0) { throw "MSYS2 runtime upgrade continuation failed (exit $LASTEXITCODE)." }
 & $pacman -S --needed --noconfirm @($manifest.msys2.packages) | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "MSYS2 package installation failed (exit $LASTEXITCODE)." }
 
