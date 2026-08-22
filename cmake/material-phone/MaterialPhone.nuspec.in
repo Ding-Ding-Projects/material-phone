@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>@PACKAGE_ID@</id>
+    <version>@PACKAGE_VERSION@</version>
+    <title>Material Phone</title>
+    <authors>Belledonne Communications and Material Phone contributors</authors>
+    <owners>Material Phone contributors</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Unsigned Windows desktop application payload packaged for Squirrel.Windows.</description>
+    <copyright>Copyright the respective contributors</copyright>
+  </metadata>
+  <files>
+    <file src="payload\**\*" target="lib\net45" />
+  </files>
+</package>

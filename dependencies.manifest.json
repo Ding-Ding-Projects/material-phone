@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "platform": "windows-x64",
+  "toolRoot": ".tools",
+  "winget": [
+    {
+      "id": "Git.Git",
+      "version": "2.51.0",
+      "sha256": "843037416371600a7f289be8fe2b2224afe1c1bb0736bbab7b3ff393e6a7aaf2",
+      "command": "git"
+    },
+    {
+      "id": "Kitware.CMake",
+      "version": "3.31.6",
+      "sha256": "4cc39d59426cbbeb33d0daff1350e39b0585a90e3c9883dbba70816b8d282811",
+      "command": "cmake"
+    },
+    {
+      "id": "Ninja-build.Ninja",
+      "version": "1.12.1",
+      "sha256": "f550fec705b6d6ff58f2db3c374c2277a37691678d6aba463adcbb129108467a",
+      "command": "ninja"
+    },
+    {
+      "id": "Python.Python.3.11",
+      "version": "3.11.9",
+      "sha256": "5ee42c4eee1e6b4464bb23722f90b45303f79442df63083f05322f1785f5fdde",
+      "command": "py"
+    },
+    {
+      "id": "Microsoft.VisualStudio.2022.BuildTools",
+      "version": "17.14.13",
+      "sha256": "a5fcbc55bd633d6c79c9319317a8cb77c70227ce87b70948c27649f7384c2909",
+      "command": "vswhere",
+      "override": "--wait --quiet --norestart --nocache --installPath %LOCALAPPDATA%\\MaterialPhoneToolchain\\VS2022 --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.26100"
+    },
+    {
+      "id": "MSYS2.MSYS2",
+      "version": "20260611",
+      "sha256": "3150d7d9aa5dedd900a7f52300d4d918271e3a8fc47de94848818fd5a430e6b0",
+      "command": "pacman"
+    },
+    {
+      "id": "Microsoft.NuGet",
+      "version": "6.12.1",
+      "sha256": "0790bb7a0c898e44b70f2b65e3070b4db8af23897e38b8653d72d268b6e8bb11",
+      "command": "nuget"
+    }
+  ],
+  "python": {
+    "version": "3.11",
+    "packages": [
+      "aqtinstall==3.2.1"
+    ]
+  },
+  "qt": {
+    "version": "6.10.0",
+    "host": "windows",
+    "target": "desktop",
+    "architecture": "win64_msvc2022_64",
+    "modules": [
+      "qt5compat",
+      "qtmultimedia",
+      "qtshadertools"
+    ]
+  },
+  "msys2": {
+    "packages": [
+      "base-devel",
+      "mingw-w64-x86_64-toolchain",
+      "mingw-w64-x86_64-nasm",
+      "mingw-w64-x86_64-yasm",
+      "mingw-w64-x86_64-pkgconf",
+      "mingw-w64-x86_64-gettext",
+      "mingw-w64-x86_64-glib2",
+      "mingw-w64-x86_64-python",
+      "bzip2",
+      "doxygen",
+      "gawk",
+      "graphviz",
+      "intltool",
+      "patch",
+      "perl",
+      "sed"
+    ]
+  },
+  "nuget": {
+    "package": "squirrel.windows",
+    "version": "2.0.1",
+    "source": "https://api.nuget.org/v3/index.json",
+    "integrity": "NuGet repository signature and package hash"
+  },
+  "submodules": [
+    "external/linphone-sdk",
+    "external/google/gn",
+    "external/google/crashpad",
+    "external/google/chromium-depot-tools"
+  ],
+  "excludedGitlinks": [
+    "external/feature-specs"
+  ],
+  "signing": {
+    "allowed": false,
+    "policy": "Code signing is prohibited. All generated Windows artifacts must remain unsigned."
+  }
+}

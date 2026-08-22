@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "packageId": "MaterialPhone",
+  "requiredArtifacts": [
+    "Setup.exe",
+    "RELEASES",
+    "*-full.nupkg"
+  ],
+  "optionalArtifacts": [
+    "*-delta.nupkg"
+  ],
+  "signing": {
+    "allowed": false,
+    "requiredAuthenticodeStatus": "NotSigned"
+  },
+  "updates": {
+    "transport": "https",
+    "integrity": "RELEASES package hashes"
+  }
+}
