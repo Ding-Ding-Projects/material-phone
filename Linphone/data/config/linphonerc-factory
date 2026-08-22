@@ -12,6 +12,9 @@ alerts_enabled=1
 activation_code_length=4
 prefer_basic_chat_room=1
 record_aware=1
+product_id=com.dingdingprojects.materialphone
+product_name=Material Phone
+product_vendor=Ding Ding Projects
 
 [assistant]
 algorithm=SHA-256
