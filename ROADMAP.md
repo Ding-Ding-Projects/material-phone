@@ -18,6 +18,7 @@
 - [x] Validate stored preferences and report refused storage reads, writes, and resets honestly.
 - [x] Remove private vocabulary values and digests from committed public tests and source.
 - [ ] Verify the polished responsive visual treatment in the built website through the approved hidden interaction route; implementation is committed, but capture was intentionally skipped in the ultra-speed pass.
+- [ ] Verify the 320 CSS-pixel document-containment fix in iPhone Safari through the approved hidden interaction route; implementation is committed, but capture was intentionally skipped in the ultra-speed pass.
 - [ ] Capture the built website at phone, tablet, and desktop widths through the approved hidden interaction route.
 - [ ] Publish the website and verify served Open Graph tags and image bytes anonymously.
 

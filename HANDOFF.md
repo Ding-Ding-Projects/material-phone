@@ -25,6 +25,7 @@ The local `main` branch contains the independent upstream snapshot plus the firs
 - Allowlisted/range-checked stored preferences with non-blocking read/write/reset refusal states.
 - Cohesive warm-copper Material Design 3 visual language across the website and adaptive desktop shell, including expressive type, shaped surfaces, purposeful elevation, refined density, and complete interaction-state styling.
 - Editorial website hero with an explicitly static call preview, product-principle indicators, responsive composition, and reduced-motion-safe ambient motion.
+- Narrow website layouts now use shrinkable grid and flex tracks plus track-relative hero decoration, navigation, actions, chips, and phone-preview sizing to prevent document-level horizontal panning from 320 CSS pixels upward; wide tables retain their intentional internal scrolling container.
 - Adaptive desktop navigation using the existing application icon sources, selected destination pills, elevated content framing, and preserved destination/model bridge wiring.
 
 ### Evidence boundary
