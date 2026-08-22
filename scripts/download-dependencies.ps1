@@ -118,27 +118,108 @@ function Get-CanonicalDownload($Fallback, [string]$DownloadRoot) {
     }
     $expectedHash = ([string]$Fallback.sha256).ToLowerInvariant()
     if ($expectedHash -notmatch '^[0-9a-f]{64}$') { throw "Portable fallback SHA-256 is invalid for $uri." }
+    $maxBytes = if ($Fallback.maxDownloadBytes) { [long]$Fallback.maxDownloadBytes } else { 1073741824L }
+    $timeoutSeconds = if ($Fallback.downloadTimeoutSeconds) { [int]$Fallback.downloadTimeoutSeconds } else { 600 }
+    $heartbeatSeconds = if ($Fallback.heartbeatSeconds) { [int]$Fallback.heartbeatSeconds } else { 15 }
+    if ($maxBytes -le 0 -or $timeoutSeconds -le 0 -or $heartbeatSeconds -le 0) { throw "Portable fallback bounds are invalid for $uri." }
     New-Item -ItemType Directory -Force -Path $DownloadRoot | Out-Null
     $leaf = [IO.Path]::GetFileName($uri.AbsolutePath)
     if ([string]::IsNullOrWhiteSpace($leaf)) { throw "Portable fallback URL has no artifact filename: $uri" }
     $destination = Join-Path $DownloadRoot "$expectedHash-$leaf"
     if (Test-Path -LiteralPath $destination -PathType Leaf) {
+        $cachedLength = (Get-Item -LiteralPath $destination).Length
+        if ($cachedLength -gt $maxBytes) { throw "Cached portable fallback exceeds its $maxBytes-byte bound: $destination ($cachedLength bytes)." }
+        Write-Phase "Verifying cached fallback $leaf ($cachedLength bytes)."
         $cachedHash = Get-Sha256 $destination
         if ($cachedHash -eq $expectedHash) { return $destination }
         Remove-Item -LiteralPath $destination -Force
     }
     $temporary = "$destination.partial-$PID"
+    $handler = $null
+    $client = $null
+    $response = $null
+    $inputStream = $null
+    $outputStream = $null
+    $cancellation = $null
     try {
-        $response = Invoke-WebRequest -UseBasicParsing -Uri $uri.AbsoluteUri -OutFile $temporary -PassThru
-        $finalUri = $response.BaseResponse.ResponseUri
-        if ($finalUri -and ($finalUri.Scheme -ne 'https' -or $allowedHosts -notcontains $finalUri.Host.ToLowerInvariant())) {
+        Add-Type -AssemblyName System.Net.Http
+        $handler = New-Object -TypeName Net.Http.HttpClientHandler
+        $handler.AllowAutoRedirect = $true
+        $handler.MaxAutomaticRedirections = 5
+        $client = New-Object -TypeName Net.Http.HttpClient -ArgumentList $handler
+        $client.Timeout = [Threading.Timeout]::InfiniteTimeSpan
+        $client.DefaultRequestHeaders.UserAgent.ParseAdd('MaterialPhone-Bootstrap/1.0')
+        $cancellation = New-Object -TypeName Threading.CancellationTokenSource
+        $started = Get-Date
+        $lastHeartbeat = $started
+        Write-Phase "Downloading $leaf from the canonical upstream (timeout ${timeoutSeconds}s; maximum $maxBytes bytes)."
+        $request = $client.GetAsync($uri, [Net.Http.HttpCompletionOption]::ResponseHeadersRead, $cancellation.Token)
+        while (-not $request.IsCompleted) {
+            $elapsedSeconds = [int]((Get-Date) - $started).TotalSeconds
+            if ($elapsedSeconds -ge $timeoutSeconds) {
+                $cancellation.Cancel()
+                throw "Portable fallback download timed out after ${timeoutSeconds}s while waiting for response headers: $uri"
+            }
+            if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                Write-Phase "Download heartbeat for ${leaf}: waiting for response headers (${elapsedSeconds}s elapsed)."
+                $lastHeartbeat = Get-Date
+            }
+            Start-Sleep -Milliseconds 250
+        }
+        $response = $request.GetAwaiter().GetResult()
+        if (-not $response.IsSuccessStatusCode) { throw "Portable fallback download returned HTTP $([int]$response.StatusCode) $($response.ReasonPhrase): $uri" }
+        $finalUri = $response.RequestMessage.RequestUri
+        if ($finalUri.Scheme -ne 'https' -or $allowedHosts -notcontains $finalUri.Host.ToLowerInvariant()) {
             throw "Portable fallback redirected outside the canonical host allowlist: $finalUri"
         }
+        $contentLength = $response.Content.Headers.ContentLength
+        if ($contentLength -and $contentLength -gt $maxBytes) { throw "Portable fallback declares $contentLength bytes, exceeding its $maxBytes-byte bound: $uri" }
+        $inputStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $outputStream = New-Object -TypeName IO.FileStream -ArgumentList @($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $buffer = New-Object byte[] 1048576
+        [long]$downloaded = 0
+        while ($true) {
+            $readTask = $inputStream.ReadAsync($buffer, 0, $buffer.Length, $cancellation.Token)
+            while (-not $readTask.IsCompleted) {
+                $elapsedSeconds = [int]((Get-Date) - $started).TotalSeconds
+                if ($elapsedSeconds -ge $timeoutSeconds) {
+                    $cancellation.Cancel()
+                    throw "Portable fallback download timed out after ${timeoutSeconds}s at $downloaded bytes: $uri"
+                }
+                if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                    $expectedText = if ($contentLength) { "/ $contentLength" } else { '' }
+                    Write-Phase "Download heartbeat for ${leaf}: $downloaded $expectedText bytes (${elapsedSeconds}s elapsed)."
+                    $lastHeartbeat = Get-Date
+                }
+                Start-Sleep -Milliseconds 250
+            }
+            $read = $readTask.GetAwaiter().GetResult()
+            if ($read -eq 0) { break }
+            $downloaded += $read
+            if ($downloaded -gt $maxBytes) { throw "Portable fallback exceeded its $maxBytes-byte bound while downloading: $uri" }
+            $outputStream.Write($buffer, 0, $read)
+            if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                $elapsedSeconds = [int]((Get-Date) - $started).TotalSeconds
+                $expectedText = if ($contentLength) { "/ $contentLength" } else { '' }
+                Write-Phase "Download heartbeat for ${leaf}: $downloaded $expectedText bytes (${elapsedSeconds}s elapsed)."
+                $lastHeartbeat = Get-Date
+            }
+        }
+        $outputStream.Flush()
+        $outputStream.Dispose()
+        $outputStream = $null
+        Write-Phase "Downloaded $leaf ($downloaded bytes); verifying SHA-256."
         $actualHash = Get-Sha256 $temporary
         if ($actualHash -ne $expectedHash) { throw "Portable fallback digest mismatch for $uri. Expected $expectedHash; received $actualHash." }
         Move-Item -LiteralPath $temporary -Destination $destination
     }
     finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+        if ($client) { $client.Dispose() }
+        if ($handler) { $handler.Dispose() }
+        if ($cancellation) { $cancellation.Dispose() }
         if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
     }
     return $destination
@@ -174,19 +255,83 @@ function Install-FallbackTool($Tool, [string]$BaseRoot) {
             }
             'tar' {
                 $extractRoot = "$installRoot.extract-$PID"
+                $extractTimeoutSeconds = if ($fallback.extractTimeoutSeconds) { [int]$fallback.extractTimeoutSeconds } else { 300 }
+                $heartbeatSeconds = if ($fallback.heartbeatSeconds) { [int]$fallback.heartbeatSeconds } else { 15 }
+                if ($extractTimeoutSeconds -le 0 -or $heartbeatSeconds -le 0) { throw "Portable fallback extraction bounds are invalid for $($Tool.id)." }
+                $windowsTar = Join-Path $env:WINDIR 'System32\tar.exe'
+                if (-not (Test-Path -LiteralPath $windowsTar -PathType Leaf)) { throw "Bounded archive extraction requires Windows tar.exe at $windowsTar." }
+                $process = $null
                 try {
                     New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
-                    & tar.exe -xf $artifact -C $extractRoot
-                    if ($LASTEXITCODE -ne 0) { throw "Portable fallback extraction failed for $($Tool.id) (exit $LASTEXITCODE)." }
+                    Write-Phase "Extracting $([IO.Path]::GetFileName($artifact)) with $windowsTar (timeout ${extractTimeoutSeconds}s)."
+                    $process = Start-Process -FilePath $windowsTar -WindowStyle Hidden -PassThru -ArgumentList @(
+                        '-xf', ('"{0}"' -f $artifact), '-C', ('"{0}"' -f $extractRoot)
+                    )
+                    $extractStarted = Get-Date
+                    $lastExtractHeartbeat = $extractStarted
+                    while (-not $process.HasExited) {
+                        $elapsedSeconds = [int]((Get-Date) - $extractStarted).TotalSeconds
+                        if ($elapsedSeconds -ge $extractTimeoutSeconds) {
+                            $process.Kill()
+                            $process.WaitForExit()
+                            throw "Portable fallback extraction timed out after ${extractTimeoutSeconds}s for $($Tool.id): $artifact"
+                        }
+                        if (((Get-Date) - $lastExtractHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                            Write-Phase "Extraction heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
+                            $lastExtractHeartbeat = Get-Date
+                        }
+                        Start-Sleep -Milliseconds 250
+                    }
+                    if ($process.ExitCode -ne 0) { throw "Portable fallback extraction failed for $($Tool.id) (exit $($process.ExitCode))." }
+                    Write-Phase "Archive extraction completed for $($Tool.id) in $([int]((Get-Date) - $extractStarted).TotalSeconds)s; validating its root."
                     $sourceRoot = $extractRoot
                     if ($fallback.stripSingleDirectory) {
                         $children = @(Get-ChildItem -LiteralPath $extractRoot)
                         if ($children.Count -ne 1 -or -not $children[0].PSIsContainer) { throw "Portable fallback archive for $($Tool.id) does not contain one root directory." }
                         $sourceRoot = $children[0].FullName
                     }
-                    Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $installRoot -Recurse -Force
+                    if ($fallback.stripSingleDirectory) {
+                        $stagingTimeoutSeconds = if ($fallback.stagingTimeoutSeconds) { [int]$fallback.stagingTimeoutSeconds } else { 60 }
+                        if ($stagingTimeoutSeconds -le 0) { throw "Portable fallback staging timeout is invalid for $($Tool.id)." }
+                        Remove-Item -LiteralPath $installRoot -Force
+                        Write-Phase "Staging $($Tool.id) by moving its verified single archive root into place (timeout ${stagingTimeoutSeconds}s)."
+                        $stagingStarted = Get-Date
+                        $lastStagingHeartbeat = $stagingStarted
+                        $stagingJob = Start-Job -ScriptBlock {
+                            param([string]$Source, [string]$Destination)
+                            [IO.Directory]::Move($Source, $Destination)
+                        } -ArgumentList $sourceRoot, $installRoot
+                        try {
+                            while ($stagingJob.State -in @('NotStarted', 'Running')) {
+                                $elapsedSeconds = [int]((Get-Date) - $stagingStarted).TotalSeconds
+                                if ($elapsedSeconds -ge $stagingTimeoutSeconds) {
+                                    Stop-Job -Job $stagingJob
+                                    throw "Portable fallback staging timed out after ${stagingTimeoutSeconds}s for $($Tool.id): $installRoot"
+                                }
+                                if (((Get-Date) - $lastStagingHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                                    Write-Phase "Staging heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
+                                    $lastStagingHeartbeat = Get-Date
+                                }
+                                Start-Sleep -Milliseconds 250
+                            }
+                            if ($stagingJob.State -ne 'Completed') {
+                                $reason = $stagingJob.ChildJobs[0].JobStateInfo.Reason.Message
+                                throw "Portable fallback staging failed for $($Tool.id): $reason"
+                            }
+                            Receive-Job -Job $stagingJob -ErrorAction Stop | Out-Null
+                        }
+                        finally {
+                            if ($stagingJob.State -in @('NotStarted', 'Running')) { Stop-Job -Job $stagingJob }
+                            Remove-Job -Job $stagingJob -Force
+                        }
+                        Write-Phase "Staged $($Tool.id) in $([int]((Get-Date) - $stagingStarted).TotalSeconds)s."
+                    }
+                    else {
+                        Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $installRoot -Recurse -Force
+                    }
                 }
                 finally {
+                    if ($process) { $process.Dispose() }
                     if (Test-Path -LiteralPath $extractRoot) { Remove-Item -LiteralPath $extractRoot -Recurse -Force }
                 }
             }

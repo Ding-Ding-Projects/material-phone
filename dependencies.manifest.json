@@ -76,6 +76,11 @@
         "kind": "tar",
         "url": "https://github.com/msys2/msys2-installer/releases/download/2026-06-11/msys2-base-x86_64-20260611.tar.xz",
         "sha256": "a2d047e8ee213c3c6a49a8de427eb1069df12207c0422ff1b3cbb5c905c34221",
+        "maxDownloadBytes": 60000000,
+        "downloadTimeoutSeconds": 1800,
+        "heartbeatSeconds": 15,
+        "extractTimeoutSeconds": 300,
+        "stagingTimeoutSeconds": 60,
         "stripSingleDirectory": true,
         "commandRelativePath": "usr/bin/pacman.exe",
         "additionalPathRelativePaths": [
