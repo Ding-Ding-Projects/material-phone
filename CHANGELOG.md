@@ -1,6 +1,23 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Material Phone static documentation website with responsive left-docked tabs.
+- Local theme, language, and independent English/Cantonese funny-level settings.
+- Settings search with an adjacent JavaScript regex builder.
+- `Ctrl+Shift+F` command palette with exact destination and settings focus.
+- Evidence-labelled desktop/web feature inventory, status dashboard, and disabled download state.
+- Categorized documentation, roadmap, handoff, provenance, security, contribution, conduct, and public agent-guidance records.
+
+### Security
+
+- Website assets and interactions are local-only, with no CDN, analytics, remote font, or runtime API request.
+- Installer action remains disabled until a verified immutable release manifest exists.
+- Personal-vocabulary file processing remains unavailable until its bounded local validator is implemented.
+
 Group changes to describe their impact on the project, as follows:
 
     Added for new features.
