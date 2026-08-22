@@ -11,6 +11,15 @@ All notable changes to this project will be documented in this file.
 - `Ctrl+Shift+F` command palette with exact destination and settings focus.
 - Evidence-labelled desktop/web feature inventory, status dashboard, and disabled download state.
 - Categorized documentation, roadmap, handoff, provenance, security, contribution, conduct, and public agent-guidance records.
+- Adaptive Material Design 3 phone shell and reusable Qt Quick controls.
+- Transport-neutral C++17 PBX provider interface, deterministic simulator, and 18-case native test suite.
+- Pinned Windows dependency manifest, one-click build scripts, and unsigned Squirrel.Windows packaging contract.
+- Windows build-and-release and GitHub Pages deployment workflows.
+
+### Changed
+
+- Registered the PBX provider in the production CMake graph.
+- Removed the inaccessible private feature-specification gitlink from the public source tree.
 
 ### Security
 

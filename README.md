@@ -1,11 +1,11 @@
 # Material Phone
 
-Material Phone is a Windows-focused Material Design 3 direction for the Linphone desktop calling experience. This repository currently contains an evidence-labelled documentation website alongside inherited upstream desktop source.
+Material Phone is a Windows-focused Material Design 3 direction for the Linphone desktop calling experience. This independent source snapshot now includes the first adaptive phone shell, a transport-neutral PBX provider contract, an evidence-labelled documentation website, and an unsigned Squirrel.Windows delivery foundation.
 
 > **Website boundary:** the website is a landing, documentation, download-status, settings, and link surface. It is not the calling runtime and cannot place or receive calls.
 
 - **Local website:** run `node site/build-site.mjs`, then serve the repository root with any local static server and open `site/index.html`.
-- **Installer:** no verified Material Phone installer is published from this documentation lane. The website keeps its download action disabled.
+- **Installer:** no verified Material Phone installer has been published yet. The website keeps its download action disabled until a release manifest proves an immutable asset.
 - **Documentation:** start with [docs/README.md](docs/README.md).
 - **Upstream provenance:** see [UPSTREAM.md](UPSTREAM.md).
 
@@ -25,14 +25,45 @@ Material Phone is a Windows-focused Material Design 3 direction for the Linphone
 </details>
 
 <details>
+<summary><strong>Desktop and PBX foundation</strong></summary>
+
+- Adaptive Qt Quick phone shell with Material Design 3 tokens and reusable controls.
+- Transport-neutral C++17 PBX provider interface with bounded requests, pagination, revisions, idempotency, deadlines, cancellation, and event-gap reporting.
+- Deterministic simulator states for healthy, offline, unauthorized, partially authorized, rate-limited, conflicted, and mixed-version behavior.
+- No Asterisk-specific transport is claimed yet; the provider boundary is ready for a separately versioned adapter.
+
+</details>
+
+<details>
 <summary><strong>Build and deterministic checks</strong></summary>
 
 ```powershell
 node site/build-site.mjs
 node --test site/test-site.mjs
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-delivery-contract.ps1
 ```
 
 The build has no package dependency. It validates the feature inventory, generates `site/inventory.js`, and copies browser-standard TypeScript from `site/app.ts` to `site/app.js`.
+
+</details>
+
+<details>
+<summary><strong>One-click Windows build and installer</strong></summary>
+
+- `download-dependencies.bat /s` validates the pinned dependency manifest and prepares the declared user-scoped toolchain.
+- `build.bat /s` runs the supported application build path without prompts.
+- `build-installer.bat /s` builds and validates the unsigned Squirrel.Windows artifact set without publishing it.
+
+Code signing is intentionally disabled. A built installer is expected to trigger the operating system's unknown-publisher warning.
+
+</details>
+
+<details>
+<summary><strong>Project scale estimate</strong></summary>
+
+The committed counter currently reports **277,044 total lines** and **266,688 non-blank lines**, excluding submodules, third-party trees, dependency caches, and generated build output. Reproduce the table with `powershell.exe -NoProfile -File scripts/count-lines.ps1 -WithAttribution`.
+
+A human-only implementation estimate is approximately **13–27 engineer-years**: 266,688 non-blank lines divided by an assumed 40–80 finished, reviewed lines per engineer-day gives roughly 3,334–6,667 engineer-days, divided by 250 working days per year. This is an estimate, not a measured schedule; it includes inherited application source and excludes the same material as the counter.
 
 </details>
 

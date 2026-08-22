@@ -14,8 +14,23 @@
 - [ ] Capture the built website at phone, tablet, and desktop widths through the approved hidden interaction route.
 - [ ] Publish the website and verify served Open Graph tags and image bytes anonymously.
 
+## Desktop foundation
+
+- [x] Add the first adaptive phone shell and reusable Material Design 3 controls.
+- [x] Add a deterministic Material Design 3 source-contract regression check.
+- [x] Add a transport-neutral C++17 PBX provider interface and simulator.
+- [x] Wire the PBX provider target into the production CMake graph.
+- [x] Verify the standalone PBX contract through 18 native tests.
+- [ ] Connect the adaptive shell to the existing calling, contacts, messaging, meetings, and account models.
+- [ ] Add the separately versioned Asterisk adapter behind the provider interface.
+- [ ] Build and interact with the real packaged desktop application through the approved hidden route.
+
 ## Evidence and delivery
 
+- [x] Add pinned, one-click Windows dependency, build, and installer entry points.
+- [x] Add an unsigned Squirrel.Windows packaging contract and negative signing regression.
+- [x] Add a GitHub Pages deployment workflow for the static documentation source.
+- [x] Remove the inaccessible private feature-specification gitlink from the public source tree.
 - [ ] Publish a verified unsigned Squirrel.Windows installer set.
 - [ ] Add an immutable release manifest containing version, commit, SHA-256, asset URL, and verification state.
 - [ ] Enable the website download action only after the release manifest passes validation.
