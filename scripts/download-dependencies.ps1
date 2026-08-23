@@ -228,7 +228,7 @@ function Get-CanonicalDownload($Fallback, [string]$DownloadRoot) {
 function Install-FallbackTool($Tool, [string]$BaseRoot) {
     if (-not $Tool.fallback) { return $null }
     $fallback = $Tool.fallback
-    $supportedKinds = @('zip', 'tar', 'exe', 'file')
+    $supportedKinds = @('zip', 'sfx', 'exe', 'file')
     if ($supportedKinds -notcontains [string]$fallback.kind) { throw "Unsupported portable fallback kind for $($Tool.id): $($fallback.kind)." }
     $installRoot = Get-FallbackInstallRoot $Tool $BaseRoot
     $commandPath = Join-Path $installRoot ([string]$fallback.commandRelativePath).Replace('/', '\')
@@ -253,12 +253,10 @@ function Install-FallbackTool($Tool, [string]$BaseRoot) {
                     if (Test-Path -LiteralPath $extractRoot) { Remove-Item -LiteralPath $extractRoot -Recurse -Force }
                 }
             }
-            'tar' {
-                $extractTimeoutSeconds = if ($fallback.extractTimeoutSeconds) { [int]$fallback.extractTimeoutSeconds } else { 300 }
+            'sfx' {
+                $installTimeoutSeconds = if ($fallback.installTimeoutSeconds) { [int]$fallback.installTimeoutSeconds } else { 600 }
                 $heartbeatSeconds = if ($fallback.heartbeatSeconds) { [int]$fallback.heartbeatSeconds } else { 15 }
-                if ($extractTimeoutSeconds -le 0 -or $heartbeatSeconds -le 0) { throw "Portable fallback extraction bounds are invalid for $($Tool.id)." }
-                $windowsTar = Join-Path $env:WINDIR 'System32\tar.exe'
-                if (-not (Test-Path -LiteralPath $windowsTar -PathType Leaf)) { throw "Bounded archive extraction requires Windows tar.exe at $windowsTar." }
+                if ($installTimeoutSeconds -le 0 -or $heartbeatSeconds -le 0) { throw "Portable fallback self-extraction bounds are invalid for $($Tool.id)." }
                 $extractParent = Split-Path -Parent $installRoot
                 if ($env:RUNNER_TEMP) {
                     $runnerTemp = [IO.Path]::GetFullPath([string]$env:RUNNER_TEMP)
@@ -266,84 +264,79 @@ function Install-FallbackTool($Tool, [string]$BaseRoot) {
                     $runnerTempVolume = [IO.Path]::GetPathRoot($runnerTemp)
                     if ((Test-Path -LiteralPath $runnerTemp -PathType Container) -and $runnerTempVolume.Equals($installVolume, [StringComparison]::OrdinalIgnoreCase)) {
                         $extractParent = $runnerTemp
-                        Write-Phase "Using same-volume runner temporary storage for $($Tool.id) extraction: $extractParent"
+                        Write-Phase "Using same-volume runner temporary storage for $($Tool.id) self-extraction: $extractParent"
                     }
                     else {
-                        Write-Phase "Runner temporary storage is unavailable or cross-volume; extracting $($Tool.id) beside its final tool root."
+                        Write-Phase "Runner temporary storage is unavailable or cross-volume; self-extracting $($Tool.id) beside its final tool root."
                     }
                 }
                 $safeId = ([string]$Tool.id) -replace '[^A-Za-z0-9._-]', '_'
                 $extractRoot = Join-Path $extractParent "$safeId-$($Tool.version)-extract-$PID"
-                if (Test-Path -LiteralPath $extractRoot) { throw "Portable fallback extraction directory already exists: $extractRoot" }
+                if (Test-Path -LiteralPath $extractRoot) { throw "Portable fallback self-extraction directory already exists: $extractRoot" }
                 $process = $null
                 try {
                     New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
-                    Write-Phase "Extracting $([IO.Path]::GetFileName($artifact)) with $windowsTar (timeout ${extractTimeoutSeconds}s)."
-                    $process = Start-Process -FilePath $windowsTar -WindowStyle Hidden -PassThru -ArgumentList @(
-                        '-xf', ('"{0}"' -f $artifact), '-C', ('"{0}"' -f $extractRoot)
-                    )
+                    Write-Phase "Running verified official self-extractor $([IO.Path]::GetFileName($artifact)) (timeout ${installTimeoutSeconds}s)."
+                    $process = Start-Process -FilePath $artifact -WindowStyle Hidden -PassThru -ArgumentList @('-y', ('-o"{0}"' -f $extractRoot))
                     $extractStarted = Get-Date
                     $lastExtractHeartbeat = $extractStarted
                     while (-not $process.HasExited) {
                         $elapsedSeconds = [int]((Get-Date) - $extractStarted).TotalSeconds
-                        if ($elapsedSeconds -ge $extractTimeoutSeconds) {
+                        if ($elapsedSeconds -ge $installTimeoutSeconds) {
                             $process.Kill()
                             $process.WaitForExit()
-                            throw "Portable fallback extraction timed out after ${extractTimeoutSeconds}s for $($Tool.id): $artifact"
+                            throw "Portable fallback self-extractor timed out after ${installTimeoutSeconds}s for $($Tool.id): $artifact"
                         }
                         if (((Get-Date) - $lastExtractHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
-                            Write-Phase "Extraction heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
+                            Write-Phase "Self-extractor heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
                             $lastExtractHeartbeat = Get-Date
                         }
                         Start-Sleep -Milliseconds 250
                     }
-                    if ($process.ExitCode -ne 0) { throw "Portable fallback extraction failed for $($Tool.id) (exit $($process.ExitCode))." }
-                    Write-Phase "Archive extraction completed for $($Tool.id) in $([int]((Get-Date) - $extractStarted).TotalSeconds)s; validating its root."
-                    $sourceRoot = $extractRoot
-                    if ($fallback.stripSingleDirectory) {
-                        $children = @(Get-ChildItem -LiteralPath $extractRoot)
-                        if ($children.Count -ne 1 -or -not $children[0].PSIsContainer) { throw "Portable fallback archive for $($Tool.id) does not contain one root directory." }
-                        $sourceRoot = $children[0].FullName
+                    if ($process.ExitCode -ne 0) { throw "Portable fallback self-extractor failed for $($Tool.id) (exit $($process.ExitCode))." }
+                    Write-Phase "Official self-extraction completed for $($Tool.id) in $([int]((Get-Date) - $extractStarted).TotalSeconds)s; validating its root and command."
+                    $children = @(Get-ChildItem -LiteralPath $extractRoot)
+                    $expectedRootDirectory = [string]$fallback.expectedRootDirectory
+                    if ([string]::IsNullOrWhiteSpace($expectedRootDirectory) -or $children.Count -ne 1 -or -not $children[0].PSIsContainer -or $children[0].Name -cne $expectedRootDirectory) {
+                        throw "Portable fallback self-extractor for $($Tool.id) did not provide the single declared root '$expectedRootDirectory'."
                     }
-                    if ($fallback.stripSingleDirectory) {
-                        $stagingTimeoutSeconds = if ($fallback.stagingTimeoutSeconds) { [int]$fallback.stagingTimeoutSeconds } else { 60 }
-                        if ($stagingTimeoutSeconds -le 0) { throw "Portable fallback staging timeout is invalid for $($Tool.id)." }
-                        Remove-Item -LiteralPath $installRoot -Force
-                        Write-Phase "Staging $($Tool.id) by moving its verified single archive root into place (timeout ${stagingTimeoutSeconds}s)."
-                        $stagingStarted = Get-Date
-                        $lastStagingHeartbeat = $stagingStarted
-                        $stagingJob = Start-Job -ScriptBlock {
-                            param([string]$Source, [string]$Destination)
-                            [IO.Directory]::Move($Source, $Destination)
-                        } -ArgumentList $sourceRoot, $installRoot
-                        try {
-                            while ($stagingJob.State -in @('NotStarted', 'Running')) {
-                                $elapsedSeconds = [int]((Get-Date) - $stagingStarted).TotalSeconds
-                                if ($elapsedSeconds -ge $stagingTimeoutSeconds) {
-                                    Stop-Job -Job $stagingJob
-                                    throw "Portable fallback staging timed out after ${stagingTimeoutSeconds}s for $($Tool.id): $installRoot"
-                                }
-                                if (((Get-Date) - $lastStagingHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
-                                    Write-Phase "Staging heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
-                                    $lastStagingHeartbeat = Get-Date
-                                }
-                                Start-Sleep -Milliseconds 250
+                    $sourceRoot = $children[0].FullName
+                    $extractedCommand = Join-Path $sourceRoot ([string]$fallback.commandRelativePath).Replace('/', '\')
+                    if (-not (Test-Path -LiteralPath $extractedCommand -PathType Leaf)) { throw "Portable fallback self-extractor did not provide the declared command for $($Tool.id): $extractedCommand" }
+                    $stagingTimeoutSeconds = if ($fallback.stagingTimeoutSeconds) { [int]$fallback.stagingTimeoutSeconds } else { 60 }
+                    if ($stagingTimeoutSeconds -le 0) { throw "Portable fallback staging timeout is invalid for $($Tool.id)." }
+                    Remove-Item -LiteralPath $installRoot -Force
+                    Write-Phase "Staging $($Tool.id) by moving its verified self-extracted root into place (timeout ${stagingTimeoutSeconds}s)."
+                    $stagingStarted = Get-Date
+                    $lastStagingHeartbeat = $stagingStarted
+                    $stagingJob = Start-Job -ScriptBlock {
+                        param([string]$Source, [string]$Destination)
+                        [IO.Directory]::Move($Source, $Destination)
+                    } -ArgumentList $sourceRoot, $installRoot
+                    try {
+                        while ($stagingJob.State -in @('NotStarted', 'Running')) {
+                            $elapsedSeconds = [int]((Get-Date) - $stagingStarted).TotalSeconds
+                            if ($elapsedSeconds -ge $stagingTimeoutSeconds) {
+                                Stop-Job -Job $stagingJob
+                                throw "Portable fallback staging timed out after ${stagingTimeoutSeconds}s for $($Tool.id): $installRoot"
                             }
-                            if ($stagingJob.State -ne 'Completed') {
-                                $reason = $stagingJob.ChildJobs[0].JobStateInfo.Reason.Message
-                                throw "Portable fallback staging failed for $($Tool.id): $reason"
+                            if (((Get-Date) - $lastStagingHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+                                Write-Phase "Staging heartbeat for $($Tool.id): ${elapsedSeconds}s elapsed."
+                                $lastStagingHeartbeat = Get-Date
                             }
-                            Receive-Job -Job $stagingJob -ErrorAction Stop | Out-Null
+                            Start-Sleep -Milliseconds 250
                         }
-                        finally {
-                            if ($stagingJob.State -in @('NotStarted', 'Running')) { Stop-Job -Job $stagingJob }
-                            Remove-Job -Job $stagingJob -Force
+                        if ($stagingJob.State -ne 'Completed') {
+                            $reason = $stagingJob.ChildJobs[0].JobStateInfo.Reason.Message
+                            throw "Portable fallback staging failed for $($Tool.id): $reason"
                         }
-                        Write-Phase "Staged $($Tool.id) in $([int]((Get-Date) - $stagingStarted).TotalSeconds)s."
+                        Receive-Job -Job $stagingJob -ErrorAction Stop | Out-Null
                     }
-                    else {
-                        Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $installRoot -Recurse -Force
+                    finally {
+                        if ($stagingJob.State -in @('NotStarted', 'Running')) { Stop-Job -Job $stagingJob }
+                        Remove-Job -Job $stagingJob -Force
                     }
+                    Write-Phase "Staged $($Tool.id) in $([int]((Get-Date) - $stagingStarted).TotalSeconds)s."
                 }
                 finally {
                     if ($process) { $process.Dispose() }

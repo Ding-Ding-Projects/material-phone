@@ -79,15 +79,15 @@
       "sha256": "3150d7d9aa5dedd900a7f52300d4d918271e3a8fc47de94848818fd5a430e6b0",
       "command": "pacman",
       "fallback": {
-        "kind": "tar",
-        "url": "https://github.com/msys2/msys2-installer/releases/download/2026-06-11/msys2-base-x86_64-20260611.tar.xz",
-        "sha256": "a2d047e8ee213c3c6a49a8de427eb1069df12207c0422ff1b3cbb5c905c34221",
-        "maxDownloadBytes": 60000000,
-        "downloadTimeoutSeconds": 1800,
+        "kind": "sfx",
+        "url": "https://github.com/msys2/msys2-installer/releases/download/2026-06-11/msys2-base-x86_64-20260611.sfx.exe",
+        "sha256": "c105946e64e08f099ac0e4647461ce762b95333ad211777666476a9a41451d65",
+        "maxDownloadBytes": 56000000,
+        "downloadTimeoutSeconds": 1200,
         "heartbeatSeconds": 15,
-        "extractTimeoutSeconds": 1200,
+        "installTimeoutSeconds": 600,
         "stagingTimeoutSeconds": 60,
-        "stripSingleDirectory": true,
+        "expectedRootDirectory": "msys64",
         "commandRelativePath": "usr/bin/pacman.exe",
         "additionalPathRelativePaths": [
           "mingw64/bin"
